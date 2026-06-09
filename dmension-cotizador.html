@@ -1238,9 +1238,20 @@ function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos
 function renderEditor(){
   const d=DESC[cur.tc]||1;
   const total=(cur.items||[]).reduce((s,i)=>s+calcI(i,d),0);
-  const tabs=['info','vinilo','laser','otros','empaque','corte','resumen'];
-  const tabLabels=['📋 Cliente','🎨 Vinilos','🖨️ Láser','📦 Otros','📫 Empaque','✂️ Corte','🧾 Resumen'];
-  const tabsHtml=tabs.map((t,i)=>`<button class="tab${vTab===t?' active':''}" onclick="setTab('${t}')">${tabLabels[i]}</button>`).join('');
+  const tabs=['info','vinilo','laser','otros','corte','empaque','resumen'];
+  const tabLabels=['📋 Cliente','🖨️ Vinilos','🖨️ Láser','⋯ Otros','✂️ Corte','📦 Empaque','🧾 Resumen'];
+  const tabIcons=['<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20c0-4 3.6-7 8-7s8 3 8 7\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M11 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2v-7\"/><path d=\"M18 2l4 4-10 10H8v-4L18 2z\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"6 9 6 2 18 2 18 9\"/><path d=\"M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2\"/><rect x=\"6\" y=\"14\" width=\"12\" height=\"8\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"6\" cy=\"12\" r=\"1.5\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.5\" fill=\"currentColor\"/><circle cx=\"18\" cy=\"12\" r=\"1.5\" fill=\"currentColor\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z\"/><polyline points=\"3.27 6.96 12 12.01 20.73 6.96\"/><line x1=\"12\" y1=\"22.08\" x2=\"12\" y2=\"12\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2\"/><rect x=\"9\" y=\"3\" width=\"6\" height=\"4\" rx=\"1\"/><path d=\"M9 12h6\"/><path d=\"M9 16h4\"/></svg>'];
+  const tabsHtml=tabs.map((t,i)=>
+    `<button onclick="setTab('${t}')" style="
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:4px;padding:12px 8px;border:2px solid ${vTab===t?'#F5A800':'#E8E8E8'};
+      border-radius:10px;background:${vTab===t?'#F5A80022':'#fff'};
+      cursor:pointer;font-family:inherit;transition:all .15s;flex:1;min-width:0;
+    ">
+      <span style="display:flex;align-items:center;justify-content:center;width:24px;height:24px">${tabIcons[i]}</span>
+      <span style="font-size:10px;font-weight:${vTab===t?'800':'600'};color:${vTab===t?'#1A1A1A':'#5A5A5A'};text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${tabLabels[i].replace(/^[^\s]+ /,'')}</span>
+    </button>`
+  ).join('');
   let content='';
   if(vTab==='info') content=renderInfo();
   else if(vTab==='vinilo') content=renderVinilo(d);
@@ -1256,7 +1267,7 @@ function renderEditor(){
       <span style="font-weight:700;color:#D4900A">${fmt(total)}</span>
       <button class="btn" onclick="guardarCot()">Guardar</button>
     </div>
-    <div class="tabs">${tabsHtml}</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px">${tabsHtml}</div>
     ${content}
   </div>`;
 }
