@@ -483,9 +483,12 @@ function addCorte(tc){
 // ── EMPAQUE DATA ─────────────────────────────────────────────────
 const CARTONES=[
   {id:"cs",n:"Cartón corrugado sencillo",lamW:194,lamH:180,precio:10000},
-  {id:"cb",n:"Cartón corrugado de bobina",lamW:0,lamH:0,precio:0},
+  {id:"cb",n:"Cartón corrugado de bobina",lamW:120,lamH:10000,precio:100000},
 ];
-const VINIPEL={precio:0}; // precio por unidad empacada
+// Vinipel: rollo 50cm x 400m = 50 x 40000 cm, precio $40000
+// Precio por cm2 = 40000 / (50*40000) = 0.02 $/cm2
+// Para el desarrollo de cada caja se usa: perimetro*(ancho+alto) cm2 de vinipel aprox
+const VINIPEL={lamW:50,lamH:40000,precio:40000};
 const TLBL={tipo3:"Tipo 3 — Esporádico",tipo2:"Tipo 2 — Medio",tipo1:"Tipo 1 — Frecuente",empleado:"Empleado"};
 
 // ── STATE ────────────────────────────────────────────────────────
@@ -494,6 +497,7 @@ let vTab="info", sCatP="Todos", sCatM="Todos", bP="", bM="", selP=[], selM=[];
 let vAncho="", vAlto="", vUnid="1", vCant="1", vRef="";
 let vRefSencillo="0", vRefPS="0", vRefCarton="0";
 let vMOHoras="0", vMOMinutos="0";
+let vCintaDelgada="0", vCintaAcolchada="0", vCintaDelgadaUnit="cm", vCintaAcolchadaUnit="cm";
 let oRef="", oNombre="", oPrecio="", oCant="1", oMOHoras="0", oMOMinutos="0", oAncho="", oAlto="";
 let editandoDesc=null; // itemId being edited
 let selAcabados=[];
@@ -503,7 +507,7 @@ let cliSearch="";
 const ADMIN_PIN="1234";
 let adminTab="procesos";
 let adminEditId=null;
-let lMod="tiro_color", lTam="carta", lFi=0, lGi=0, lCant="1", lRef="", lRefSencillo="0", lMOHoras="0", lMOMinutos="0";
+let lMod="tiro_color", lTam="carta", lFi=0, lGi=0, lCant="1", lRef="", lRefSencillo="0", lMOHoras="0", lMOMinutos="0", lCintaDelgada="0", lCintaAcolchada="0", lCintaDelgadaUnit="cm", lCintaAcolchadaUnit="cm";
 let cRef="", cTipo="cnc", cDistancia="", cSpeed="15", cPasadas="1", cMinutosLaser="", cNombre="";
 let eRef="", eCartonId="cs", eLargo="", eAncho="", eAlto="", eCant="1", eVinipel=false, eMOHoras="0", eMOMinutos="0";
 let eMaterialNombre="", eMaterialPrecio="", eMaterialCant="1";
@@ -921,9 +925,10 @@ function renderEmpaque(){
     const carton=CARTONES.find(c=>c.id===eCartonId)||CARTONES[0];
     const devW=2*(parseFloat(eLargo)+parseFloat(eAlto))+2;
     const devH=parseFloat(eAncho)+parseFloat(eAlto)+2;
-    const fraccion=carton.lamW?Math.ceil((devW*devH)/(carton.lamW*carton.lamH)*1.20*1000)/1000:0; // +20% desperdicio
+    const fraccion=carton.lamW?Math.ceil((devW*devH)/(carton.lamW*carton.lamH)*1.40*1000)/1000:0; // +20% desperdicio
     const costoC=fraccion*carton.precio*(parseInt(eCant)||1)*D;
-    const costoV=eVinipel?(VINIPEL.precio||0)*(parseInt(eCant)||1)*D:0;
+    const vinipelPrecioM2V=VINIPEL.precio/(VINIPEL.lamW*VINIPEL.lamH);
+  const costoV=eVinipel?Math.ceil(devW*devH*3*vinipelPrecioM2V*100)/100*(parseInt(eCant)||1)*D:0;
     const moH=(parseFloat(eMOHoras)||0)+(parseFloat(eMOMinutos)||0)/60;
     const costoMO=moH*35000*D;
     const total=costoC+costoV+costoMO;
@@ -1000,15 +1005,16 @@ function updateEmpaquePreview(){
   const carton=CARTONES.find(c=>c.id===eCartonId)||CARTONES[0];
   const devW=2*(parseFloat(eLargo)+parseFloat(eAlto))+2;
   const devH=parseFloat(eAncho)+parseFloat(eAlto)+2;
-  const fraccion=carton.lamW?Math.ceil((devW*devH)/(carton.lamW*carton.lamH)*1.20*1000)/1000:0; // +20% desperdicio
+  const fraccion=carton.lamW?Math.ceil((devW*devH)/(carton.lamW*carton.lamH)*1.40*1000)/1000:0; // +20% desperdicio
   const costoC=fraccion*carton.precio*(parseInt(eCant)||1)*D;
-  const costoV=eVinipel?(VINIPEL.precio||0)*(parseInt(eCant)||1)*D:0;
+  const vinipelPrecioM2V=VINIPEL.precio/(VINIPEL.lamW*VINIPEL.lamH);
+  const costoV=eVinipel?Math.ceil(devW*devH*3*vinipelPrecioM2V*100)/100*(parseInt(eCant)||1)*D:0;
   const moH=(parseFloat(eMOHoras)||0)+(parseFloat(eMOMinutos)||0)/60;
   const costoMO=moH*35000*D;
   const total=costoC+costoV+costoMO;
   box.innerHTML='<div class="preview" style="margin-bottom:12px">'
     +'<p style="margin:0 0 4px;font-size:12px;color:#5A5A5A">Desarrollo: '+devW.toFixed(1)+'×'+devH.toFixed(1)+' cm</p>'
-    +(carton.lamW?'<p style="margin:0 0 4px;font-size:12px;color:#5A5A5A">Fracción de lámina: '+fraccion+' (incluye 20% desperdicio · lámina: '+carton.lamW+'×'+carton.lamH+' cm = '+fmt(carton.precio)+')</p>':'')
+    +(carton.lamW?'<p style="margin:0 0 4px;font-size:12px;color:#5A5A5A">Fracción de lámina: '+fraccion+' (incluye 40% desperdicio · lámina: '+carton.lamW+'×'+carton.lamH+' cm = '+fmt(carton.precio)+')</p>':'')
     +'<p style="margin:0;font-size:13px;color:#5A5A5A">Total ×'+eCant+' cajas = <strong style="font-size:16px;color:#1A1A1A">'+fmt(total)+'</strong></p>'
     +'</div>';
 }
@@ -1020,7 +1026,7 @@ function addEmpaque(){
   const carton=CARTONES.find(c=>c.id===eCartonId)||CARTONES[0];
   const devW=2*(parseFloat(eLargo)+parseFloat(eAlto))+2;
   const devH=parseFloat(eAncho)+parseFloat(eAlto)+2;
-  const fraccion=carton.lamW?Math.ceil((devW*devH)/(carton.lamW*carton.lamH)*1.20*1000)/1000:0; // +20% desperdicio
+  const fraccion=carton.lamW?Math.ceil((devW*devH)/(carton.lamW*carton.lamH)*1.40*1000)/1000:0; // +20% desperdicio
   cur.items=[...cur.items,{
     id:uid(),tipo:'empaque',ref:eRef,cartonId:eCartonId,
     largo:parseFloat(eLargo),ancho:parseFloat(eAncho),alto:parseFloat(eAlto),
@@ -1102,6 +1108,10 @@ function calcI_otros(item,d){
 function calcRefilados(item,d){
   return (item.refilados||[]).reduce((s,r)=>s+r.cortes*r.costo*d,0);
 }
+function toMetros(val, unit){ return unit==='m' ? parseFloat(val)||0 : (parseFloat(val)||0)/100; }
+function calcCintas(item,d){
+  return (item.cintas||[]).reduce((s,c)=>s+c.metros*c.base*d,0);
+}
 function calcManoObra(item,d){
   return item.manoObra?item.manoObra.total*d:0;
 }
@@ -1116,9 +1126,11 @@ function calcEmpaque(item){
   const devH=ancho+alto+2;     // cm alto desarrollo + solapas
   const lamW=carton.lamW||1;
   const lamH=carton.lamH||1;
-  const fraccion=Math.ceil((devW*devH)/(lamW*lamH)*1.20*100)/100; // +20% desperdicio
+  const fraccion=Math.ceil((devW*devH)/(lamW*lamH)*1.40*100)/100; // +20% desperdicio
   const costoCarton=fraccion*carton.precio*(parseInt(item.cant)||1)*d;
-  const costoVinipel=item.vinipel?(VINIPEL.precio||0)*(parseInt(item.cant)||1)*d:0;
+  // Vinipel: se calcula por area de desarrollo de la caja
+  const vinipelPrecioM2=VINIPEL.precio/(VINIPEL.lamW*VINIPEL.lamH);
+  const costoVinipel=item.vinipel?Math.ceil(devW*devH*3*vinipelPrecioM2*100)/100*(parseInt(item.cant)||1)*d:0;
   const moH=(parseFloat(item.manoObra?.horas)||0)+(parseFloat(item.manoObra?.minutos)||0)/60;
   const costoMO=moH*35000*d;
   return {costoCarton,costoVinipel,costoMO,fraccion,total:costoCarton+costoVinipel+costoMO};
@@ -1132,12 +1144,12 @@ function calcI(item,d){
   if(item.tipo==="vinilo"){
     const cm2=item.ancho*item.alto*(item.unid||1);
     const base=item.subs.reduce((s,si)=>s+cm2*si.p,0)*(item.cant||1)*d;
-    return base+calcRefilados(item,d)+calcManoObra(item,d);
+    return base+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d);
   }
   if(item.tipo==="laser"){
     const base=(LBASE[item.mod]?.[item.tam]||0)+(item.pPap||0);
     const acabadosTotal=(item.acabados||[]).reduce((s,a)=>s+(a.p||0),0);
-    return(base+acabadosTotal)*(item.cant||1)*d+calcRefilados(item,d)+calcManoObra(item,d);
+    return(base+acabadosTotal)*(item.cant||1)*d+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d);
   }
   return 0;
 }
@@ -1232,8 +1244,8 @@ async function guardarCot(){
   pushCotizacionToGS(cur);
   alert('✅ Cotización guardada');render();
 }
-function resetVinilo(){selP=[];selM=[];bP='';bM='';vAncho='';vAlto='';vUnid='1';vCant='1';vRef='';vRefSencillo='0';vRefPS='0';vRefCarton='0';vMOHoras='0';vMOMinutos='0';sCatP='Todos';sCatM='Todos';}
-function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos='0';selAcabados=[];}
+function resetVinilo(){selP=[];selM=[];bP='';bM='';vAncho='';vAlto='';vUnid='1';vCant='1';vRef='';vRefSencillo='0';vRefPS='0';vRefCarton='0';vMOHoras='0';vMOMinutos='0';vCintaDelgada='0';vCintaAcolchada='0';vCintaDelgadaUnit='cm';vCintaAcolchadaUnit='cm';sCatP='Todos';sCatM='Todos';}
+function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos='0';lCintaDelgada='0';lCintaAcolchada='0';lCintaDelgadaUnit='cm';lCintaAcolchadaUnit='cm';selAcabados=[];}
 
 function renderEditor(){
   const d=DESC[cur.tc]||1;
@@ -1384,6 +1396,23 @@ function renderVinilo(d){
       </div>
     </div>
     <div style="margin-top:4px;margin-bottom:16px;background:#f8f8f8;border-radius:8px;padding:14px">
+      <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Cinta doble faz (metros lineales)</p>
+      <div class="grid2" style="gap:12px">
+        <div><label>Delgada 12mm ($1.600/m tipo medio)</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" inputmode="decimal" id="inp_cintaDelgada" value="${vCintaDelgada}" oninput="vCintaDelgada=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updatePreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+            <select onchange="vCintaDelgadaUnit=this.value;updatePreview()" style="width:64px;flex-shrink:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 6px;font-size:13px;font-family:inherit;outline:none"><option value="cm" ${vCintaDelgadaUnit==="cm"?"selected":""}>cm</option><option value="m" ${vCintaDelgadaUnit==="m"?"selected":""}>m</option></select>
+          </div>
+        </div>
+        <div><label>Acolchada 19mm ($2.400/m tipo medio)</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" inputmode="decimal" id="inp_cintaAcolchada" value="${vCintaAcolchada}" oninput="vCintaAcolchada=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updatePreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+            <select onchange="vCintaAcolchadaUnit=this.value;updatePreview()" style="width:64px;flex-shrink:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 6px;font-size:13px;font-family:inherit;outline:none"><option value="cm" ${vCintaAcolchadaUnit==="cm"?"selected":""}>cm</option><option value="m" ${vCintaAcolchadaUnit==="m"?"selected":""}>m</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:4px;margin-bottom:16px;background:#f8f8f8;border-radius:8px;padding:14px">
       <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Mano de obra ($35.000/hora)</p>
       <div class="grid2" style="gap:12px">
         <div><label>Horas</label><input type="number" inputmode="decimal" id="inp_moHoras" value="${vMOHoras}" oninput="vMOHoras=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
@@ -1494,7 +1523,10 @@ function addVinilo(){
   if(parseFloat(vRefCarton)>0) refilados.push({tipo:'carton',n:'Refilado cartón industrial',cortes:parseFloat(vRefCarton),costo:713.51});
   const moHoras=(parseFloat(vMOHoras)||0)+(parseFloat(vMOMinutos)||0)/60;
   const manoObra=moHoras>0?{horas:parseFloat(vMOHoras)||0,minutos:parseFloat(vMOMinutos)||0,total:moHoras*35000}:null;
-  const item={id:uid(),tipo:"vinilo",ref:vRef,subs:selItems.map(i=>({id:i.id,n:i.n,p:i.p})),ancho:parseFloat(vAncho),alto:parseFloat(vAlto),unid:parseFloat(vUnid)||1,cant:parseInt(vCant)||1,refilados,manoObra};
+  const cintas=[];
+  if(parseFloat(vCintaDelgada)>0) cintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:toMetros(vCintaDelgada,vCintaDelgadaUnit),base:1729.7297});
+  if(parseFloat(vCintaAcolchada)>0) cintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:toMetros(vCintaAcolchada,vCintaAcolchadaUnit),base:2594.5946});
+  const item={id:uid(),tipo:"vinilo",ref:vRef,subs:selItems.map(i=>({id:i.id,n:i.n,p:i.p})),ancho:parseFloat(vAncho),alto:parseFloat(vAlto),unid:parseFloat(vUnid)||1,cant:parseInt(vCant)||1,refilados,cintas,manoObra};
   cur.items=[...cur.items,item];
   resetVinilo();render();
 }
@@ -1543,6 +1575,23 @@ function renderLaser(d){
       <input type="number" inputmode="decimal" value="${lRefSencillo}" oninput="lRefSencillo=this.value" onfocus="if(this.value=='0')this.value='';this.style.borderColor='#F5A800'" onblur="if(this.value=='')this.value='0';this.style.borderColor='#E8E8E8';updateLaserPreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
     </div>
     <div style="margin-bottom:12px;background:#f8f8f8;border-radius:8px;padding:12px 14px">
+      <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Cinta doble faz (metros lineales)</p>
+      <div class="grid2" style="gap:12px">
+        <div><label>Delgada 12mm ($1.600/m tipo medio)</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" inputmode="decimal" value="${lCintaDelgada}" oninput="lCintaDelgada=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updateLaserPreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+            <select onchange="lCintaDelgadaUnit=this.value;updateLaserPreview()" style="width:64px;flex-shrink:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 6px;font-size:13px;font-family:inherit;outline:none"><option value="cm" ${lCintaDelgadaUnit==="cm"?"selected":""}>cm</option><option value="m" ${lCintaDelgadaUnit==="m"?"selected":""}>m</option></select>
+          </div>
+        </div>
+        <div><label>Acolchada 19mm ($2.400/m tipo medio)</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" inputmode="decimal" value="${lCintaAcolchada}" oninput="lCintaAcolchada=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updateLaserPreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+            <select onchange="lCintaAcolchadaUnit=this.value;updateLaserPreview()" style="width:64px;flex-shrink:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 6px;font-size:13px;font-family:inherit;outline:none"><option value="cm" ${lCintaAcolchadaUnit==="cm"?"selected":""}>cm</option><option value="m" ${lCintaAcolchadaUnit==="m"?"selected":""}>m</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-bottom:12px;background:#f8f8f8;border-radius:8px;padding:12px 14px">
       <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Mano de obra ($35.000/hora)</p>
       <div class="grid2" style="gap:12px">
         <div><label>Horas</label><input type="number" inputmode="decimal" value="${lMOHoras}" oninput="lMOHoras=this.value" onfocus="if(this.value=='0')this.value='';this.style.borderColor='#F5A800'" onblur="if(this.value=='')this.value='0';this.style.borderColor='#E8E8E8';updateLaserPreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none"></div>
@@ -1579,7 +1628,10 @@ function addLaser(){
   if(parseFloat(lRefSencillo)>0) lRefilados.push({tipo:'sencillo',n:'Refilado sencillo',cortes:parseFloat(lRefSencillo),costo:172.97});
   const lMOTotalHoras=(parseFloat(lMOHoras)||0)+(parseFloat(lMOMinutos)||0)/60;
   const lManoObra=lMOTotalHoras>0?{horas:parseFloat(lMOHoras)||0,minutos:parseFloat(lMOMinutos)||0,total:lMOTotalHoras*35000}:null;
-  cur.items=[...cur.items,{id:uid(),tipo:"laser",ref:lRef,nombre,mod:lMod,tam:lTam,fam:fam.f,gr:gr?.gr,pPap:pP,pImp:pI,acabados:acabadosSel,refilados:lRefilados,manoObra:lManoObra,cant:parseInt(lCant)||1}];
+  const lCintas=[];
+  if(parseFloat(lCintaDelgada)>0) lCintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:toMetros(lCintaDelgada,lCintaDelgadaUnit),base:1729.7297});
+  if(parseFloat(lCintaAcolchada)>0) lCintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:toMetros(lCintaAcolchada,lCintaAcolchadaUnit),base:2594.5946});
+  cur.items=[...cur.items,{id:uid(),tipo:"laser",ref:lRef,nombre,mod:lMod,tam:lTam,fam:fam.f,gr:gr?.gr,pPap:pP,pImp:pI,acabados:acabadosSel,refilados:lRefilados,cintas:lCintas,manoObra:lManoObra,cant:parseInt(lCant)||1}];
   resetLaser();render();
 }
 function togAcabado(id){
