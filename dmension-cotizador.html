@@ -1117,7 +1117,14 @@ async function gsCall(params){
 async function syncClientes(){
   showSyncMsg('Sincronizando clientes...');
   const r=await gsCall({action:'getClientes'});
-  if(r.data){clientes=r.data;await saveClientes();}
+  if(r.data){
+    const fromGS=r.data;
+    const gsIds=new Set(fromGS.map(c=>c.id));
+    const localOnly=clientes.filter(c=>!gsIds.has(c.id));
+    clientes=[...fromGS,...localOnly];
+    await saveClientes();
+    if(localOnly.length) await gsCall({action:'saveClientes',data:clientes});
+  }
   hideSyncMsg();
 }
 
@@ -1125,9 +1132,15 @@ async function syncCotizaciones(){
   showSyncMsg('Sincronizando cotizaciones...');
   const r=await gsCall({action:'getCotizaciones'});
   if(r.data){
-    cots=r.data.map(c=>({...c,items:typeof c.items==='string'?JSON.parse(c.items||'[]'):c.items||[]}));
+    const fromGS=r.data.map(c=>({...c,items:typeof c.items==='string'?JSON.parse(c.items||'[]'):c.items||[]}));
+    const gsIds=new Set(fromGS.map(c=>c.id));
+    // Keep local cots that haven't made it to GS yet
+    const localOnly=cots.filter(c=>!gsIds.has(c.id));
+    cots=[...fromGS,...localOnly];
     if(cots.length)cnt=Math.max(...cots.map(c=>parseInt(c.num)||0))+1;
     await saveCots();
+    // Push local-only cots to GS
+    for(const c of localOnly) await pushCotizacionToGS(c);
   }
   hideSyncMsg();
 }
