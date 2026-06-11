@@ -497,6 +497,7 @@ let vTab="info", sCatP="Todos", sCatM="Todos", bP="", bM="", selP=[], selM=[];
 let vAncho="", vAlto="", vUnid="1", vCant="1", vRef="";
 let vRefSencillo="0", vRefPS="0", vRefCarton="0";
 let vMOHoras="0", vMOMinutos="0";
+let dosCarasSet=new Set(); // ids of selected items marked as 2 caras
 let vCintaDelgada="0", vCintaAcolchada="0", vCintaDelgadaUnit="cm", vCintaAcolchadaUnit="cm";
 let oRef="", oNombre="", oPrecio="", oCant="1", oMOHoras="0", oMOMinutos="0", oAncho="", oAlto="";
 let editandoDesc=null; // itemId being edited
@@ -554,6 +555,7 @@ const fmtCm2=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",m
 const fmtFecha=f=>{if(!f)return'';const[y,m,d]=f.split('-');return new Date(y,m-1,d).toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});};
 const uid=()=>Math.random().toString(36).slice(2,9);
 const SK="dmension_html_v1";
+const SK_PRECIOS="dmension_precios_v1";
 const SK_CLI="dmension_clientes_v1";
 let clientes=[];
 
@@ -683,10 +685,37 @@ function renderCliModal(){
 
 async function loadClientes(){try{const r=await window.storage.get(SK_CLI);if(r)clientes=JSON.parse(r.value);}catch{}}
 async function saveClientes(){try{await window.storage.set(SK_CLI,JSON.stringify(clientes));}catch{}}
+async function syncPreciosFromGS(){
+  showSyncMsg('Sincronizando precios...');
+  const r=await gsCall({action:'getPrecios'});
+  if(r.procesos||r.materiales||r.papeles||r.acabados){
+    const tam=['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'];
+    if(r.procesos&&r.procesos.length) r.procesos.forEach(p=>{const item=PR.find(x=>x.id===p.id);if(item){item.n=p.n;item.p=parseFloat(p.p)||item.p;item.cat=p.cat||item.cat;}});
+    if(r.materiales&&r.materiales.length) r.materiales.forEach(m=>{const item=MT.find(x=>x.id===m.id);if(item){item.n=m.n;item.p=parseFloat(m.p)||item.p;item.c=m.c||item.c;}});
+    if(r.papeles&&r.papeles.length) r.papeles.forEach(p=>{if(LPAP[p.fi]&&LPAP[p.fi].g[p.gi]){const g=LPAP[p.fi].g[p.gi];tam.forEach(t=>{if(p[t])g.p[t]=parseFloat(p[t])||0;});}});
+    if(r.acabados&&r.acabados.length) r.acabados.forEach(a=>{const item=ACABADOS.find(x=>x.id===a.id);if(item){tam.forEach(t=>{if(a[t])item.p[t]=parseFloat(a[t])||0;});}});
+    await savePreciosLocal();
+  }
+  hideSyncMsg();
+}
+
+async function pushPreciosToGS(){
+  const tam=['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'];
+  const procesos=PR.map(p=>({id:p.id,cat:p.cat,n:p.n,p:p.p}));
+  const materiales=MT.map(m=>({id:m.id,c:m.c,n:m.n,p:m.p}));
+  const papeles=LPAP.flatMap((fam,fi)=>fam.g.map((gr,gi)=>({fi,gi,familia:fam.f,gramaje:gr.gr||'',...Object.fromEntries(tam.map(t=>[t,gr.p[t]||0]))})));
+  const acabados=ACABADOS.map(a=>({id:a.id,n:a.n,...Object.fromEntries(tam.map(t=>[t,a.p[t]||0]))}));
+  await gsCall({action:'saveProcesos',data:procesos});
+  await gsCall({action:'saveMateriales',data:materiales});
+  await gsCall({action:'savePapeles',data:papeles});
+  await gsCall({action:'saveAcabados',data:acabados});
+}
+
 async function syncAll(){
   showSyncMsg('Sincronizando...');
   await syncCotizaciones();
   await syncClientes();
+  await syncPreciosFromGS();
   hideSyncMsg();
   render();
 }
@@ -1047,6 +1076,33 @@ function addMaterialEmpaque(){
   render();
 }
 
+// ── PRECIOS LOCAL STORAGE ────────────────────────────────────────
+async function loadPreciosLocal(){
+  try {
+    const r=await window.storage.get(SK_PRECIOS);
+    if(r){
+      const data=JSON.parse(r.value);
+      if(data.procesos&&data.procesos.length) data.procesos.forEach(p=>{const item=PR.find(x=>x.id===p.id);if(item){item.n=p.n;item.p=p.p;item.cat=p.cat;}});
+      if(data.materiales&&data.materiales.length) data.materiales.forEach(m=>{const item=MT.find(x=>x.id===m.id);if(item){item.n=m.n;item.p=m.p;item.c=m.c;}});
+      if(data.papeles&&data.papeles.length) data.papeles.forEach(p=>{if(LPAP[p.fi]&&LPAP[p.fi].g[p.gi]){const g=LPAP[p.fi].g[p.gi];['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'].forEach(t=>{if(p[t]!==undefined)g.p[t]=parseFloat(p[t])||0;});}});
+      if(data.acabados&&data.acabados.length) data.acabados.forEach(a=>{const item=ACABADOS.find(x=>x.id===a.id);if(item){item.n=a.n;['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'].forEach(t=>{if(a[t]!==undefined)item.p[t]=parseFloat(a[t])||0;});}});
+    }
+  } catch(e){console.error('loadPreciosLocal:',e);}
+}
+
+async function savePreciosLocal(){
+  try {
+    const tam=['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'];
+    const data={
+      procesos:PR.map(p=>({id:p.id,cat:p.cat,n:p.n,p:p.p})),
+      materiales:MT.map(m=>({id:m.id,c:m.c,n:m.n,p:m.p})),
+      papeles:LPAP.flatMap((fam,fi)=>fam.g.map((gr,gi)=>({fi,gi,familia:fam.f,gramaje:gr.gr,...Object.fromEntries(tam.map(t=>[t,gr.p[t]||0]))}))),
+      acabados:ACABADOS.map(a=>({id:a.id,n:a.n,...Object.fromEntries(tam.map(t=>[t,a.p[t]||0]))}))
+    };
+    await window.storage.set(SK_PRECIOS,JSON.stringify(data));
+  } catch(e){console.error('savePreciosLocal:',e);}
+}
+
 // ── GOOGLE SHEETS SYNC ───────────────────────────────────────────
 const GS_URL='https://script.google.com/macros/s/AKfycbwMTs0tbn4wWmnuNNzt6uxmOQ1O-GDpHbKlwHamAj50L5zm5WmO48y_5m2BAQH5-DKxLQ/exec';
 
@@ -1143,7 +1199,7 @@ function calcI(item,d){
   if(item.tipo==="corte") return calcCorte(item,d);
   if(item.tipo==="vinilo"){
     const cm2=item.ancho*item.alto*(item.unid||1);
-    const base=item.subs.reduce((s,si)=>s+cm2*si.p,0)*(item.cant||1)*d;
+    const base=item.subs.reduce((s,si)=>s+cm2*si.p*(si.dosCaras?2:1),0)*(item.cant||1)*d;
     return base+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d);
   }
   if(item.tipo==="laser"){
@@ -1244,7 +1300,7 @@ async function guardarCot(){
   pushCotizacionToGS(cur);
   alert('✅ Cotización guardada');render();
 }
-function resetVinilo(){selP=[];selM=[];bP='';bM='';vAncho='';vAlto='';vUnid='1';vCant='1';vRef='';vRefSencillo='0';vRefPS='0';vRefCarton='0';vMOHoras='0';vMOMinutos='0';vCintaDelgada='0';vCintaAcolchada='0';vCintaDelgadaUnit='cm';vCintaAcolchadaUnit='cm';sCatP='Todos';sCatM='Todos';}
+function resetVinilo(){selP=[];selM=[];dosCarasSet=new Set();bP='';bM='';vAncho='';vAlto='';vUnid='1';vCant='1';vRef='';vRefSencillo='0';vRefPS='0';vRefCarton='0';vMOHoras='0';vMOMinutos='0';vCintaDelgada='0';vCintaAcolchada='0';vCintaDelgadaUnit='cm';vCintaAcolchadaUnit='cm';sCatP='Todos';sCatM='Todos';}
 function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos='0';lCintaDelgada='0';lCintaAcolchada='0';lCintaDelgadaUnit='cm';lCintaAcolchadaUnit='cm';selAcabados=[];}
 
 function renderEditor(){
@@ -1315,7 +1371,8 @@ function renderVinilo(d){
   const selItems=[...PR.filter(p=>selP.includes(p.id)),...MT.filter(m=>selM.includes(m.id))];
   const cm2=(parseFloat(vAncho)||0)*(parseFloat(vAlto)||0)*(parseFloat(vUnid)||1);
   const ptCm2=selItems.reduce((s,i)=>s+i.p,0);
-  const prev=cm2*ptCm2*(parseInt(vCant)||1)*d;
+  const ptCm2Total=selItems.reduce((s,i)=>s+i.p*(dosCarasSet.has(i.id)?2:1),0);
+  const prev=cm2*ptCm2Total*(parseInt(vCant)||1)*d;
   const ivs=(cur.items||[]).filter(i=>i.tipo==="vinilo");
 
   const listP=fP.map(p=>`<div class="list-item${selP.includes(p.id)?' sel':''}" data-id="${p.id}" data-list="P" onclick="togP('${p.id}')">
@@ -1324,6 +1381,7 @@ function renderVinilo(d){
       <span class="iname${selP.includes(p.id)?' on':''}">${p.n}</span>
     </div>
     <span class="iprice">${fmtCm2(p.p)}/cm²</span>
+
   </div>`).join('');
 
   const listM=fM.map(m=>`<div class="list-item${selM.includes(m.id)?' sel':''}" data-id="${m.id}" data-list="M" onclick="togM('${m.id}')">
@@ -1332,12 +1390,13 @@ function renderVinilo(d){
       <span class="iname${selM.includes(m.id)?' on':''}">${m.n}</span>
     </div>
     <span class="iprice">${fmtCm2(m.p)}/cm²</span>
+
   </div>`).join('');
 
   const filtBtnsP=catsP.map(c=>`<button class="filt${sCatP===c?' on':''}" onclick="sCatP='${c}';render()">${c}</button>`).join('');
   const filtBtnsM=catsM.map(c=>`<button class="filt${sCatM===c?' on':''}" onclick="sCatM='${c}';render()">${c}</button>`).join('');
 
-  const selBox=`<div class="sel-box" id="selBox" style="display:${selItems.length?'block':'none'}"><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#5A5A5A;margin-bottom:6px">Seleccionados (${selItems.length})</p><div>${selItems.map(i=>`<span class="sel-tag">${i.n} <span style="color:#5A5A5A">(${fmtCm2(i.p)})</span></span>`).join('')}</div></div>`;
+  const selBox=`<div class="sel-box" id="selBox" style="display:${selItems.length?'block':'none'}"><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#5A5A5A;margin-bottom:6px">Seleccionados (${selItems.length})</p><div>${selItems.map(i=>`<span class="sel-tag">${i.n} <span style="color:#5A5A5A">(${fmtCm2(i.p)}${dosCarasSet.has(i.id)?' ×2':''})</span></span>`).join('')}</div></div>`;
 
   const prevBox=(selItems.length&&vAncho&&vAlto)?`<div class="preview">${cm2.toLocaleString('es-CO')} cm² × ${fmtCm2(ptCm2)}/cm² × ${vCant} = <strong>${fmt(prev)}</strong></div>`:'';
 
@@ -1425,9 +1484,14 @@ function renderVinilo(d){
   ${ivs.length?`<div class="card"><h3>Ítems de vinilos (${ivs.length})</h3>${ivsHtml}</div>`:''}`;
 }
 
+function togDosCaras(id,btn){
+  if(dosCarasSet.has(id)){dosCarasSet.delete(id);if(btn)btn.style.background='#E8E8E8';}
+  else{dosCarasSet.add(id);if(btn)btn.style.background='#F5A800';}
+  updateSelBox();updatePreview();
+}
+
 function togP(id){
   selP=selP.includes(id)?selP.filter(x=>x!==id):[...selP,id];
-  // Update checkbox visually without full re-render
   const el=document.querySelector(`[data-id="${id}"][data-list="P"]`);
   if(el){
     const on=selP.includes(id);
@@ -1436,6 +1500,19 @@ function togP(id){
     const nm=el.querySelector('.iname');
     if(chk){chk.classList.toggle('on',on);}
     if(nm){nm.classList.toggle('on',on);}
+    // Add/remove ×2 button
+    let btn=el.querySelector('.btn-x2');
+    if(on&&!btn){
+      btn=document.createElement('button');
+      btn.className='btn-x2';
+      btn.textContent='×2';
+      btn.style.cssText='margin-left:6px;background:#E8E8E8;border:none;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0';
+      btn.onclick=function(e){e.stopPropagation();togDosCaras(id,btn);};
+      el.appendChild(btn);
+    } else if(!on&&btn){
+      btn.remove();
+      dosCarasSet.delete(id);
+    }
   }
   updateSelBox();updatePreview();
 }
@@ -1449,6 +1526,19 @@ function togM(id){
     const nm=el.querySelector('.iname');
     if(chk){chk.classList.toggle('on',on);}
     if(nm){nm.classList.toggle('on',on);}
+    // Add/remove ×2 button
+    let btn=el.querySelector('.btn-x2');
+    if(on&&!btn){
+      btn=document.createElement('button');
+      btn.className='btn-x2';
+      btn.textContent='×2';
+      btn.style.cssText='margin-left:6px;background:#E8E8E8;border:none;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0';
+      btn.onclick=function(e){e.stopPropagation();togDosCaras(id,btn);};
+      el.appendChild(btn);
+    } else if(!on&&btn){
+      btn.remove();
+      dosCarasSet.delete(id);
+    }
   }
   updateSelBox();updatePreview();
 }
@@ -1458,7 +1548,7 @@ function updateSelBox(){
   const box=document.getElementById('selBox');
   if(!box)return;
   if(selItems.length){
-    box.innerHTML=`<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#5A5A5A;margin-bottom:6px">Seleccionados (${selItems.length})</p><div>${selItems.map(i=>`<span class="sel-tag">${i.n} <span style="color:#5A5A5A">(${fmtCm2(i.p)})</span></span>`).join('')}</div>`;
+    box.innerHTML=`<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#5A5A5A;margin-bottom:6px">Seleccionados (${selItems.length})</p><div>${selItems.map(i=>`<span class="sel-tag">${i.n} <span style="color:#5A5A5A">(${fmtCm2(i.p)}${dosCarasSet.has(i.id)?' ×2':''})</span></span>`).join('')}</div>`;
     box.style.display='block';
   } else {
     box.innerHTML='';box.style.display='none';
@@ -1501,7 +1591,8 @@ function updatePreview(){
   const cm2=(parseFloat(vAncho)||0)*(parseFloat(vAlto)||0)*(parseFloat(vUnid)||1);
   const ptCm2=selItems.reduce((s,i)=>s+i.p,0);
   const d=DESC[cur.tc]||1;
-  const prev=cm2*ptCm2*(parseInt(vCant)||1)*d;
+  const ptCm2Total=selItems.reduce((s,i)=>s+i.p*(dosCarasSet.has(i.id)?2:1),0);
+  const prev=cm2*ptCm2Total*(parseInt(vCant)||1)*d;
   const box=document.getElementById('previewBox');
   const btn=document.getElementById('btnAddVinilo');
   if(box){
@@ -1526,7 +1617,7 @@ function addVinilo(){
   const cintas=[];
   if(parseFloat(vCintaDelgada)>0) cintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:toMetros(vCintaDelgada,vCintaDelgadaUnit),base:1729.7297});
   if(parseFloat(vCintaAcolchada)>0) cintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:toMetros(vCintaAcolchada,vCintaAcolchadaUnit),base:2594.5946});
-  const item={id:uid(),tipo:"vinilo",ref:vRef,subs:selItems.map(i=>({id:i.id,n:i.n,p:i.p})),ancho:parseFloat(vAncho),alto:parseFloat(vAlto),unid:parseFloat(vUnid)||1,cant:parseInt(vCant)||1,refilados,cintas,manoObra};
+  const item={id:uid(),tipo:"vinilo",ref:vRef,subs:selItems.map(i=>({id:i.id,n:i.n,p:i.p,dosCaras:dosCarasSet.has(i.id)})),ancho:parseFloat(vAncho),alto:parseFloat(vAlto),unid:parseFloat(vUnid)||1,cant:parseInt(vCant)||1,refilados,cintas,manoObra};
   cur.items=[...cur.items,item];
   resetVinilo();render();
 }
@@ -1658,7 +1749,7 @@ function renderResumen(d,total){
   const stL=il.reduce((s,i)=>s+calcI(i,d),0);
   const ivHtml=iv.map(item=>{
     const refHtml=item.ref?'<p style="margin:0 0 2px;font-size:12px;font-weight:800;color:#D4900A">'+item.ref+'</p>':'';
-    const descAuto=item.subs.map(function(s){return s.n;}).join(' + ');
+    const descAuto=item.subs.map(function(s){return s.n+(s.dosCaras?' (×2)':'');}).join(' + ');
     const desc=item.descCustom||descAuto;
     const isEditing=editandoDesc===item.id;
     const editBtn='<button data-action="editDesc" data-id="'+item.id+'" style="background:none;border:none;cursor:pointer;font-size:14px;margin-left:4px;color:#5A5A5A">✏️</button>';
@@ -1798,7 +1889,7 @@ function genPDF(){
       if(item.manoObra) desc+='<br><span style="font-size:11px;color:#666">Mano de obra: '+item.manoObra.horas+'h '+item.manoObra.minutos+'min</span>';
     }
     if(item.tipo==='vinilo'){
-      desc=item.descCustom||item.subs.map(function(s){return s.n;}).join(' + ');
+      desc=item.descCustom||item.subs.map(function(s){return s.n+(s.dosCaras?' (×2)':'');}).join(' + ');
       if(item.refilados&&item.refilados.length) desc+='<br><span style="font-size:11px;color:#666">'+item.refilados.map(function(r){return r.n+': '+r.cortes+' cortes';}).join(' · ')+'</span>';
       if(item.manoObra) desc+='<br><span style="font-size:11px;color:#666">Mano de obra: '+item.manoObra.horas+'h '+item.manoObra.minutos+'min</span>';
       if(item.manoObra) desc+='<br><span style="font-size:11px;color:#666">Mano de obra: '+item.manoObra.horas+'h '+item.manoObra.minutos+'min</span>';
@@ -2111,26 +2202,31 @@ function saveAdminModal(){
     if(!n){alert('El nombre es obligatorio');return;}
     if(m.isNew){arr.push({id:m.data.id,n,p,[m.catKey]:cat});}
     else{const item=arr.find(i=>i.id===m.id);if(item){item.n=n;item.p=p;item[m.catKey]=cat;}}
+    savePreciosLocal();pushPreciosToGS();
   } else if(m.type==='papel'){
     const tam=['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'];
     const gr=LPAP[m.fi].g[m.gi];
     tam.forEach(t=>{const v=parseFloat(document.getElementById('adm_'+t).value)||0;gr.p[t]=v;});
+    savePreciosLocal();pushPreciosToGS();
   } else if(m.type==='acabado'){
     const tam=['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'];
     const a=ACABADOS[m.idx];
     tam.forEach(t=>{const v=parseFloat(document.getElementById('adm_'+t).value)||0;a.p[t]=v;});
+    savePreciosLocal();pushPreciosToGS();
   }
   window._adminModal=null;render();
 }
 
 
 // ── INIT ─────────────────────────────────────────────────────────
+loadPreciosLocal().then(()=>{
 loadCots().then(()=>{
   loadClientes().then(()=>{
     render();
     // Sync from GS in background
-    syncCotizaciones().then(()=>syncClientes()).then(()=>render());
+    syncPreciosFromGS().then(()=>syncCotizaciones()).then(()=>syncClientes()).then(()=>render());
   });
+});
 });
 </script>
 </body>
