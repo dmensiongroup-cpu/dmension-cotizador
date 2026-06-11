@@ -683,8 +683,14 @@ function renderCliModal(){
   </div>`;
 }
 
-async function loadClientes(){try{const r=await window.storage.get(SK_CLI);if(r)clientes=JSON.parse(r.value);}catch{}}
-async function saveClientes(){try{await window.storage.set(SK_CLI,JSON.stringify(clientes));}catch{}}
+async function loadClientes(){
+  try{
+    if(window.storage){const r=await window.storage.get(SK_CLI);if(r)clientes=JSON.parse(r.value);}
+  }catch(e){console.log('loadClientes local:',e);}
+}
+async function saveClientes(){
+  try{if(window.storage)await window.storage.set(SK_CLI,JSON.stringify(clientes));}catch(e){}
+}
 async function syncPreciosFromGS(){
   showSyncMsg('Sincronizando precios...');
   const r=await gsCall({action:'getPrecios'});
@@ -720,8 +726,14 @@ async function syncAll(){
   render();
 }
 
-async function loadCots(){try{const r=await window.storage.get(SK);if(r){cots=JSON.parse(r.value);if(cots.length)cnt=Math.max(...cots.map(c=>c.num||0))+1;}}catch{}render();}
-async function saveCots(){try{await window.storage.set(SK,JSON.stringify(cots));}catch{}}
+async function loadCots(){
+  try{
+    if(window.storage){const r=await window.storage.get(SK);if(r){cots=JSON.parse(r.value);if(cots.length)cnt=Math.max(...cots.map(c=>parseInt(c.num)||0))+1;}}
+  }catch(e){console.log('loadCots local:',e);}
+}
+async function saveCots(){
+  try{if(window.storage)await window.storage.set(SK,JSON.stringify(cots));}catch(e){}
+}
 
 // ── OTROS ────────────────────────────────────────────────────────
 function renderOtros(d){
@@ -1079,6 +1091,7 @@ function addMaterialEmpaque(){
 // ── PRECIOS LOCAL STORAGE ────────────────────────────────────────
 async function loadPreciosLocal(){
   try {
+    if(!window.storage)return;
     const r=await window.storage.get(SK_PRECIOS);
     if(r){
       const data=JSON.parse(r.value);
@@ -1099,7 +1112,7 @@ async function savePreciosLocal(){
       papeles:LPAP.flatMap((fam,fi)=>fam.g.map((gr,gi)=>({fi,gi,familia:fam.f,gramaje:gr.gr,...Object.fromEntries(tam.map(t=>[t,gr.p[t]||0]))}))),
       acabados:ACABADOS.map(a=>({id:a.id,n:a.n,...Object.fromEntries(tam.map(t=>[t,a.p[t]||0]))}))
     };
-    await window.storage.set(SK_PRECIOS,JSON.stringify(data));
+    if(window.storage)await window.storage.set(SK_PRECIOS,JSON.stringify(data));
   } catch(e){console.error('savePreciosLocal:',e);}
 }
 
@@ -1108,9 +1121,18 @@ const GS_URL='https://script.google.com/macros/s/AKfycbwMTs0tbn4wWmnuNNzt6uxmOQ1
 
 async function gsCall(params){
   try{
-    const url=GS_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)).join('&');
-    const r=await fetch(url);
-    return await r.json();
+    // Use POST for large data, GET for simple queries
+    const hasLargeData=params.data&&JSON.stringify(params.data).length>1000;
+    if(hasLargeData){
+      const formData=new FormData();
+      Object.entries(params).forEach(([k,v])=>formData.append(k,typeof v==='object'?JSON.stringify(v):v));
+      const r=await fetch(GS_URL,{method:'POST',body:formData});
+      return await r.json();
+    } else {
+      const url=GS_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)).join('&');
+      const r=await fetch(url);
+      return await r.json();
+    }
   }catch(e){console.error('GS error:',e);return {error:e.toString()};}
 }
 
@@ -1305,7 +1327,7 @@ function nuevaCot(){
   vTab='info'; screen='editor'; resetVinilo(); render();
 }
 function abrirCot(id){cur={...cots.find(c=>c.id===id)};vTab='info';screen='editor';resetVinilo();render();}
-async function eliminarCot(id){if(!confirm('¿Eliminar esta cotización?'))return;cots=cots.filter(c=>c.id!==id);await saveCots();render();}
+async function eliminarCot(id){if(!confirm('¿Eliminar esta cotización?'))return;cots=cots.filter(c=>c.id!==id);await saveCots();deleteCotizacionFromGS(id);render();}
 async function guardarCot(){
   if(!cur.id){cur={...cur,id:uid()};cots=[...cots,cur];}
   else cots=cots.map(c=>c.id===cur.id?cur:c);
