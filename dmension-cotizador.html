@@ -1484,9 +1484,9 @@ function renderVinilo(d){
     <div style="margin-top:4px;margin-bottom:16px;background:#f8f8f8;border-radius:8px;padding:14px">
       <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Refilados (número de cortes)</p>
       <div class="grid2" style="gap:12px">
-        <div><label>Refilado sencillo ($160/corte tipo medio)</label><input type="number" inputmode="decimal" id="inp_refSencillo" value="${vRefSencillo}" oninput="vRefSencillo=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
-        <div><label>Refilado poliestireno ($330/corte tipo medio)</label><input type="number" inputmode="decimal" id="inp_refPS" value="${vRefPS}" oninput="vRefPS=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
-        <div><label>Refilado cartón industrial ($660/corte tipo medio)</label><input type="number" inputmode="decimal" id="inp_refCarton" value="${vRefCarton}" oninput="vRefCarton=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
+        <div><label>Refilado sencillo ($160/corte tipo medio) — cortes totales</label><input type="number" inputmode="decimal" id="inp_refSencillo" value="${vRefSencillo}" oninput="vRefSencillo=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
+        <div><label>Refilado poliestireno ($330/corte tipo medio) — cortes totales</label><input type="number" inputmode="decimal" id="inp_refPS" value="${vRefPS}" oninput="vRefPS=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
+        <div><label>Refilado cartón industrial ($660/corte tipo medio) — cortes totales</label><input type="number" inputmode="decimal" id="inp_refCarton" value="${vRefCarton}" oninput="vRefCarton=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
       </div>
     </div>
     <div style="margin-top:4px;margin-bottom:16px;background:#f8f8f8;border-radius:8px;padding:14px">
@@ -1697,7 +1697,7 @@ function renderLaser(d){
     </div>
     <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A;margin-bottom:8px">Acabados adicionales <span id="cntAcabados" style="background:#F5A800;border-radius:10px;padding:1px 7px;font-size:11px;color:#1A1A1A">${selAcabados.length}</span></p>
     <div style="margin-bottom:12px;background:#f8f8f8;border-radius:8px;padding:12px 14px">
-      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Refilado sencillo ($160/corte tipo medio)</p>
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Refilado sencillo ($160/corte tipo medio) — cortes totales</p>
       <input type="number" inputmode="decimal" value="${lRefSencillo}" oninput="lRefSencillo=this.value" onfocus="if(this.value=='0')this.value='';this.style.borderColor='#F5A800'" onblur="if(this.value=='')this.value='0';this.style.borderColor='#E8E8E8';updateLaserPreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
     </div>
     <div style="margin-bottom:12px;background:#f8f8f8;border-radius:8px;padding:12px 14px">
@@ -1829,6 +1829,28 @@ function renderResumen(d,total){
 
   const iem2=(cur.items||[]).filter(i=>i.tipo==="empaque_mat");
   const stO=io.reduce((s,i)=>s+calcI(i,d),0);
+  const ioHtml=io.map(function(item){
+    const refHtml=item.ref?'<p style="margin:0 0 2px;font-size:12px;font-weight:800;color:#D4900A">'+item.ref+'</p>':'';
+    const desc=item.descCustom||item.nombre;
+    const isEditing=editandoDesc===item.id;
+    let descHtml='';
+    if(isEditing){
+      descHtml='<textarea data-descid="'+item.id+'" style="width:100%;border:1.5px solid #F5A800;border-radius:6px;padding:8px;font-size:12px;font-family:inherit;outline:none;resize:vertical;min-height:60px">'+desc+'</textarea>'
+        +'<div style="display:flex;gap:6px;margin-top:4px">'
+        +'<button data-action="saveDesc" data-id="'+item.id+'" style="background:#F5A800;border:none;border-radius:4px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✓ Guardar</button>'
+        +'<button data-action="cancelDesc" data-id="'+item.id+'" style="background:#E8E8E8;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer">Cancelar</button>'
+        +(item.descCustom?'<button data-action="resetDesc" data-id="'+item.id+'" style="background:none;border:none;font-size:11px;cursor:pointer;color:#E53E3E">Restablecer</button>':'')
+        +'</div>';
+    } else {
+      descHtml='<div style="display:flex;align-items:center;flex:1"><span style="flex:1">'+desc+' <span style="color:#5A5A5A">×'+item.cant+'</span></span>'
+        +'<button data-action="editDesc" data-id="'+item.id+'" style="background:none;border:none;cursor:pointer;font-size:14px;margin-left:4px;color:#5A5A5A">✏️</button></div>';
+    }
+    return '<div class="sum-row" style="flex-direction:column;align-items:flex-start;gap:4px">'
+      +'<div style="display:flex;justify-content:space-between;width:100%;align-items:flex-start">'
+      +'<div style="flex:1">'+refHtml+descHtml+'</div>'
+      +(isEditing?'':'<span style="font-weight:600;flex-shrink:0;margin-left:8px">'+fmt(calcI(item,d))+'</span>')
+      +'</div></div>';
+  }).join('');
   const stE=ie.reduce((s,i)=>s+calcEmpaque(i).total,0)+iem2.reduce((s,i)=>s+(parseFloat(i.precioUnit)||0)*(parseInt(i.cant)||1)*DESC.tipo1,0);
   const stC=ic.reduce((s,i)=>s+calcCorte(i,d),0);
 
