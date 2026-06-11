@@ -1327,7 +1327,16 @@ function nuevaCot(){
   vTab='info'; screen='editor'; resetVinilo(); render();
 }
 function abrirCot(id){cur={...cots.find(c=>c.id===id)};vTab='info';screen='editor';resetVinilo();render();}
-async function eliminarCot(id){if(!confirm('¿Eliminar esta cotización?'))return;cots=cots.filter(c=>c.id!==id);await saveCots();deleteCotizacionFromGS(id);render();}
+async function eliminarCot(id){
+  const pin=prompt('Ingresa la clave de administrador para eliminar:');
+  if(pin===null)return;
+  if(pin!==ADMIN_PIN){alert('Clave incorrecta. No se eliminó la cotización.');return;}
+  if(!confirm('¿Confirmas que deseas eliminar esta cotización?'))return;
+  cots=cots.filter(c=>c.id!==id);
+  await saveCots();
+  deleteCotizacionFromGS(id);
+  render();
+}
 async function guardarCot(){
   if(!cur.id){cur={...cur,id:uid()};cots=[...cots,cur];}
   else cots=cots.map(c=>c.id===cur.id?cur:c);
