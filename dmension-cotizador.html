@@ -337,21 +337,231 @@ const CORTE_PRECIOS={tipo1:2200,tipo2:2400,tipo3:2600,empleado:1700}; // $ por m
 const CNC_SPEEDS={mdf:15,papel:30}; // mm/seg
 const CNC_PASADAS={6:1,9:2,12:2,15:3,18:4,25:5};
 
+// ── EDICION DE ITEMS ─────────────────────────────────────────────
+function editarItem(id){
+  const item=cur.items.find(i=>i.id===id);
+  if(!item)return;
+  editandoItem={...item,subs:item.subs?[...item.subs.map(s=>({...s}))]:undefined,acabados:item.acabados?[...item.acabados]:undefined};
+  render();
+  setTimeout(()=>{
+    const modal=document.getElementById('editItemModal');
+    if(modal) modal.scrollIntoView({behavior:'smooth',block:'center'});
+  },100);
+}
+
+function cancelarEditItem(){editandoItem=null;render();}
+
+function guardarEditItem(){
+  if(!editandoItem)return;
+  const idx=cur.items.findIndex(i=>i.id===editandoItem.id);
+  if(idx>-1){
+    // Read updated values from form
+    const tipo=editandoItem.tipo;
+    if(tipo==='vinilo'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||editandoItem.ref;
+      editandoItem.ancho=parseFloat(document.getElementById('ei_ancho')?.value)||editandoItem.ancho;
+      editandoItem.alto=parseFloat(document.getElementById('ei_alto')?.value)||editandoItem.alto;
+      editandoItem.unid=parseFloat(document.getElementById('ei_unid')?.value)||editandoItem.unid;
+      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
+      editandoItem.refSencillo=parseFloat(document.getElementById('ei_refSencillo')?.value)||0;
+      editandoItem.refPS=parseFloat(document.getElementById('ei_refPS')?.value)||0;
+      editandoItem.refCarton=parseFloat(document.getElementById('ei_refCarton')?.value)||0;
+      editandoItem.cintaDelgadaM=parseFloat(document.getElementById('ei_cintaD')?.value)||0;
+      editandoItem.cintaAcolchadaM=parseFloat(document.getElementById('ei_cintaA')?.value)||0;
+      editandoItem.moH=parseFloat(document.getElementById('ei_moH')?.value)||0;
+      editandoItem.moM=parseFloat(document.getElementById('ei_moM')?.value)||0;
+      // Update refilados
+      const refilados=[];
+      if(editandoItem.refSencillo>0) refilados.push({tipo:'sencillo',n:'Refilado sencillo',cortes:editandoItem.refSencillo,costo:172.97});
+      if(editandoItem.refPS>0) refilados.push({tipo:'ps',n:'Refilado poliestireno',cortes:editandoItem.refPS,costo:356.76});
+      if(editandoItem.refCarton>0) refilados.push({tipo:'carton',n:'Refilado cartón industrial',cortes:editandoItem.refCarton,costo:713.51});
+      editandoItem.refilados=refilados;
+      // Update cintas
+      const cintas=[];
+      if(editandoItem.cintaDelgadaM>0) cintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:editandoItem.cintaDelgadaM,base:1729.73});
+      if(editandoItem.cintaAcolchadaM>0) cintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:editandoItem.cintaAcolchadaM,base:2594.59});
+      editandoItem.cintas=cintas;
+      // Update mano de obra
+      const moH=(editandoItem.moH||0)+(editandoItem.moM||0)/60;
+      editandoItem.manoObra=moH>0?{horas:editandoItem.moH||0,minutos:editandoItem.moM||0,total:moH*35000}:null;
+    }
+    if(tipo==='laser'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||editandoItem.ref;
+      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
+      editandoItem.refSencillo=parseFloat(document.getElementById('ei_refSencillo')?.value)||0;
+      editandoItem.cintaDelgadaM=parseFloat(document.getElementById('ei_cintaD')?.value)||0;
+      editandoItem.cintaAcolchadaM=parseFloat(document.getElementById('ei_cintaA')?.value)||0;
+      editandoItem.moH=parseFloat(document.getElementById('ei_moH')?.value)||0;
+      editandoItem.moM=parseFloat(document.getElementById('ei_moM')?.value)||0;
+      const refilados=[];
+      if(editandoItem.refSencillo>0) refilados.push({tipo:'sencillo',n:'Refilado sencillo',cortes:editandoItem.refSencillo,costo:172.97});
+      editandoItem.refilados=refilados;
+      const cintas=[];
+      if(editandoItem.cintaDelgadaM>0) cintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:editandoItem.cintaDelgadaM,base:1729.73});
+      if(editandoItem.cintaAcolchadaM>0) cintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:editandoItem.cintaAcolchadaM,base:2594.59});
+      editandoItem.cintas=cintas;
+      const moH=(editandoItem.moH||0)+(editandoItem.moM||0)/60;
+      editandoItem.manoObra=moH>0?{horas:editandoItem.moH||0,minutos:editandoItem.moM||0,total:moH*35000}:null;
+    }
+    if(tipo==='otros'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||'';
+      editandoItem.nombre=document.getElementById('ei_nombre')?.value||editandoItem.nombre;
+      editandoItem.precioUnit=parseFloat(document.getElementById('ei_precio')?.value)||editandoItem.precioUnit;
+      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
+      editandoItem.dims=document.getElementById('ei_ancho')?.value&&document.getElementById('ei_alto')?.value?{ancho:parseFloat(document.getElementById('ei_ancho').value),alto:parseFloat(document.getElementById('ei_alto').value)}:editandoItem.dims;
+      const moH=(parseFloat(document.getElementById('ei_moH')?.value)||0)+(parseFloat(document.getElementById('ei_moM')?.value)||0)/60;
+      editandoItem.manoObra=moH>0?{horas:parseFloat(document.getElementById('ei_moH')?.value)||0,minutos:parseFloat(document.getElementById('ei_moM')?.value)||0,total:moH*35000}:null;
+    }
+    if(tipo==='empaque'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||'';
+      editandoItem.largo=parseFloat(document.getElementById('ei_largo')?.value)||editandoItem.largo;
+      editandoItem.ancho=parseFloat(document.getElementById('ei_ancho')?.value)||editandoItem.ancho;
+      editandoItem.alto=parseFloat(document.getElementById('ei_alto')?.value)||editandoItem.alto;
+      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
+      editandoItem.vinipel=document.getElementById('ei_vinipel')?.checked||false;
+      const moH=(parseFloat(document.getElementById('ei_moH')?.value)||0)+(parseFloat(document.getElementById('ei_moM')?.value)||0)/60;
+      editandoItem.manoObra=moH>0?{horas:parseFloat(document.getElementById('ei_moH')?.value)||0,minutos:parseFloat(document.getElementById('ei_moM')?.value)||0,total:moH*35000}:null;
+      // Recalculate fraccion
+      const carton=CARTONES.find(c=>c.id===editandoItem.cartonId)||CARTONES[0];
+      const devW=2*(editandoItem.largo+editandoItem.alto)+2;
+      const devH=editandoItem.ancho+editandoItem.alto+2;
+      editandoItem.fraccion=carton.lamW?Math.ceil((devW*devH)/(carton.lamW*carton.lamH)*1.40*1000)/1000:0;
+    }
+    if(tipo==='corte'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||'';
+      editandoItem.nombre=document.getElementById('ei_nombre')?.value||'';
+      if(editandoItem.subTipo==='cnc'){
+        editandoItem.distancia=parseFloat(document.getElementById('ei_distancia')?.value)||editandoItem.distancia;
+        editandoItem.speed=document.getElementById('ei_speed')?.value||editandoItem.speed;
+        editandoItem.pasadas=parseInt(document.getElementById('ei_pasadas')?.value)||editandoItem.pasadas;
+      } else {
+        editandoItem.minutos=parseFloat(document.getElementById('ei_minutos')?.value)||editandoItem.minutos;
+      }
+    }
+    cur.items[idx]={...editandoItem};
+  }
+  editandoItem=null;
+  render();
+}
+
+function renderEditItemModal(){
+  if(!editandoItem)return'';
+  const item=editandoItem;
+  const inpStyle='width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none';
+  let fields='';
+
+  const refField='<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Referencia</label>'
+    +'<input id="ei_ref" type="text" value="'+(item.ref||'')+'" style="'+inpStyle+'"></div>';
+
+  if(item.tipo==='vinilo'){
+    fields=refField
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Ancho (cm)</label><input id="ei_ancho" type="number" value="'+(item.ancho||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Alto (cm)</label><input id="ei_alto" type="number" value="'+(item.alto||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Unidades</label><input id="ei_unid" type="number" value="'+(item.unid||1)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cantidad</label><input id="ei_cant" type="number" value="'+(item.cant||1)+'" style="'+inpStyle+'"></div>'
+      +'</div>'
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Refilado sencillo (cortes)</label><input id="ei_refSencillo" type="number" value="'+((item.refilados||[]).find(r=>r.tipo==="sencillo")?.cortes||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Refilado poliestireno (cortes)</label><input id="ei_refPS" type="number" value="'+((item.refilados||[]).find(r=>r.tipo==="ps")?.cortes||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Refilado cartón industrial (cortes)</label><input id="ei_refCarton" type="number" value="'+((item.refilados||[]).find(r=>r.tipo==="carton")?.cortes||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cinta delgada (m)</label><input id="ei_cintaD" type="number" value="'+((item.cintas||[]).find(c=>c.tipo==="delgada")?.metros||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cinta acolchada (m)</label><input id="ei_cintaA" type="number" value="'+((item.cintas||[]).find(c=>c.tipo==="acolchada")?.metros||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (horas)</label><input id="ei_moH" type="number" value="'+(item.manoObra?.horas||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (minutos)</label><input id="ei_moM" type="number" value="'+(item.manoObra?.minutos||0)+'" style="'+inpStyle+'"></div>'
+      +'</div>';
+  }
+  if(item.tipo==='laser'){
+    fields=refField
+      +'<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cantidad</label><input id="ei_cant" type="number" value="'+(item.cant||1)+'" style="'+inpStyle+'"></div>'
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Refilado sencillo (cortes)</label><input id="ei_refSencillo" type="number" value="'+((item.refilados||[]).find(r=>r.tipo==="sencillo")?.cortes||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cinta delgada (m)</label><input id="ei_cintaD" type="number" value="'+((item.cintas||[]).find(c=>c.tipo==="delgada")?.metros||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cinta acolchada (m)</label><input id="ei_cintaA" type="number" value="'+((item.cintas||[]).find(c=>c.tipo==="acolchada")?.metros||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (horas)</label><input id="ei_moH" type="number" value="'+(item.manoObra?.horas||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (minutos)</label><input id="ei_moM" type="number" value="'+(item.manoObra?.minutos||0)+'" style="'+inpStyle+'"></div>'
+      +'</div>';
+  }
+  if(item.tipo==='otros'){
+    fields=refField
+      +'<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Nombre / Descripción</label><input id="ei_nombre" type="text" value="'+(item.nombre||'')+'" style="'+inpStyle+'"></div>'
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Ancho (cm)</label><input id="ei_ancho" type="number" value="'+(item.dims?.ancho||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Alto (cm)</label><input id="ei_alto" type="number" value="'+(item.dims?.alto||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Precio unitario ($)</label><input id="ei_precio" type="number" value="'+(item.precioUnit||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cantidad</label><input id="ei_cant" type="number" value="'+(item.cant||1)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (horas)</label><input id="ei_moH" type="number" value="'+(item.manoObra?.horas||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (minutos)</label><input id="ei_moM" type="number" value="'+(item.manoObra?.minutos||0)+'" style="'+inpStyle+'"></div>'
+      +'</div>';
+  }
+  if(item.tipo==='empaque'){
+    const carton=CARTONES.find(c=>c.id===item.cartonId)||CARTONES[0];
+    const cartonOpts=CARTONES.map(c=>'<option value="'+c.id+'"'+(item.cartonId===c.id?' selected':'')+'>'+c.n+'</option>').join('');
+    fields=refField
+      +'<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Tipo de cartón</label>'
+      +'<select id="ei_carton" style="'+inpStyle+'">'+cartonOpts+'</select></div>'
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Largo (cm)</label><input id="ei_largo" type="number" value="'+(item.largo||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Ancho (cm)</label><input id="ei_ancho" type="number" value="'+(item.ancho||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Alto (cm)</label><input id="ei_alto" type="number" value="'+(item.alto||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cantidad de cajas</label><input id="ei_cant" type="number" value="'+(item.cant||1)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (horas)</label><input id="ei_moH" type="number" value="'+(item.manoObra?.horas||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (minutos)</label><input id="ei_moM" type="number" value="'+(item.manoObra?.minutos||0)+'" style="'+inpStyle+'"></div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+      +'<input type="checkbox" id="ei_vinipel" '+(item.vinipel?'checked':'')+' style="width:18px;height:18px">'
+      +'<label for="ei_vinipel">Incluir vinipel</label>'
+      +'</div>';
+  }
+  if(item.tipo==='corte'){
+    const pasadasOpts=[1,2,3,4,5].map(n=>'<option value="'+n+'"'+(parseInt(item.pasadas)===n?' selected':'')+'>'+n+' pasada'+(n>1?'s':'')+'</option>').join('');
+    fields=refField
+      +'<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Descripción</label><input id="ei_nombre" type="text" value="'+(item.nombre||'')+'" style="'+inpStyle+'"></div>'
+      +(item.subTipo==='cnc'?
+        '<div class="grid2" style="gap:12px;margin-bottom:12px">'
+        +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Distancia (cm lineales)</label><input id="ei_distancia" type="number" value="'+(item.distancia||'')+'" style="'+inpStyle+'"></div>'
+        +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Velocidad (mm/seg)</label>'
+        +'<select id="ei_speed" style="'+inpStyle+'"><option value="15"'+(item.speed==="15"?" selected":"")+'>15 mm/seg</option><option value="30"'+(item.speed==="30"?" selected":"")+'>30 mm/seg</option></select></div>'
+        +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Pasadas</label>'
+        +'<select id="ei_pasadas" style="'+inpStyle+'">'+pasadasOpts+'</select></div>'
+        +'</div>'
+      :
+        '<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Minutos de corte</label><input id="ei_minutos" type="number" value="'+(item.minutos||'')+'" style="'+inpStyle+'"></div>'
+      );
+  }
+
+  const tipo=item.tipo==='vinilo'?'Vinilos':item.tipo==='laser'?'Láser':item.tipo==='otros'?'Otros':item.tipo==='empaque'?'Empaque':'Corte';
+  return '<div id="editItemModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:flex-end;justify-content:center">'
+    +'<div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:85vh;display:flex;flex-direction:column">'
+    +'<div style="padding:16px 20px;border-bottom:1px solid #E8E8E8;display:flex;align-items:center;gap:12px">'
+    +'<p style="margin:0;font-weight:800;font-size:16px;flex:1">Editar ítem — '+tipo+'</p>'
+    +'<button onclick="cancelarEditItem()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#5A5A5A">×</button>'
+    +'</div>'
+    +'<div style="overflow-y:auto;flex:1;padding:20px">'
+    +fields
+    +'</div>'
+    +'<div style="padding:16px 20px;border-top:1px solid #E8E8E8;display:flex;gap:10px">'
+    +'<button onclick="cancelarEditItem()" style="flex:1;background:#E8E8E8;border:none;border-radius:6px;padding:12px;font-weight:700;cursor:pointer;font-family:inherit">Cancelar</button>'
+    +'<button onclick="guardarEditItem()" style="flex:1;background:#F5A800;border:none;border-radius:6px;padding:12px;font-weight:700;cursor:pointer;font-family:inherit">✓ Guardar cambios</button>'
+    +'</div></div></div>';
+}
+
 // ── CORTE LASER Y CNC ────────────────────────────────────────────
 function calcCorte(item,tc){
   const precioMin=CORTE_PRECIOS[tc]||CORTE_PRECIOS.tipo2;
+  let raw=0;
   if(item.subTipo==='laser'){
-    return (parseFloat(item.minutos)||0)*precioMin;
+    raw=(parseFloat(item.minutos)||0)*precioMin;
   }
   if(item.subTipo==='cnc'){
-    const dist=(parseFloat(item.distancia)||0)*10; // cm a mm
+    const dist=(parseFloat(item.distancia)||0)*10;
     const speed=parseFloat(item.speed)||15;
     const pasadas=parseInt(item.pasadas)||1;
     const segundos=(dist/speed)*pasadas;
     const minutos=segundos/60;
-    return minutos*precioMin;
+    raw=minutos*precioMin;
   }
-  return 0;
+  return Math.ceil(raw/100)*100;
 }
 
 function calcMinutosCNC(distancia,speed,pasadas){
@@ -401,6 +611,9 @@ function renderCorte(tc){
       +' · '+mins.toFixed(2)+' min · '+fmt(CORTE_PRECIOS[tc])+'/min</p>'
       +'</div>'
       +'<span style="font-weight:700;font-size:14px;flex-shrink:0">'+fmt(tot)+'</span>'
+      +'<button data-action="moveUp" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:2px">↑</button>'
+      +'<button data-action="moveDown" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:4px">↓</button>'
+      +'<button data-action="editItem" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer;margin-right:4px">✏️</button>'
       +'<button data-action="delItem" data-id="'+item.id+'" class="del">×</button>'
       +'</div>';
   }).join('');
@@ -753,6 +966,9 @@ function renderOtros(d){
       +'<div style="margin-top:6px">'+addImgBtn+'</div>'
       +'</div>'
       +'<span style="font-weight:700;font-size:14px;flex-shrink:0">'+fmt(tot)+'</span>'
+      +'<button data-action="moveUp" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:2px">↑</button>'
+      +'<button data-action="moveDown" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:4px">↓</button>'
+      +'<button data-action="editItem" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer;margin-right:4px">✏️</button>'
       +'<button data-action="delItem" data-id="'+item.id+'" class="del">×</button>'
       +'</div>';
   }).join('');
@@ -811,21 +1027,231 @@ function addOtro(){
   render();
 }
 
+// ── EDICION DE ITEMS ─────────────────────────────────────────────
+function editarItem(id){
+  const item=cur.items.find(i=>i.id===id);
+  if(!item)return;
+  editandoItem={...item,subs:item.subs?[...item.subs.map(s=>({...s}))]:undefined,acabados:item.acabados?[...item.acabados]:undefined};
+  render();
+  setTimeout(()=>{
+    const modal=document.getElementById('editItemModal');
+    if(modal) modal.scrollIntoView({behavior:'smooth',block:'center'});
+  },100);
+}
+
+function cancelarEditItem(){editandoItem=null;render();}
+
+function guardarEditItem(){
+  if(!editandoItem)return;
+  const idx=cur.items.findIndex(i=>i.id===editandoItem.id);
+  if(idx>-1){
+    // Read updated values from form
+    const tipo=editandoItem.tipo;
+    if(tipo==='vinilo'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||editandoItem.ref;
+      editandoItem.ancho=parseFloat(document.getElementById('ei_ancho')?.value)||editandoItem.ancho;
+      editandoItem.alto=parseFloat(document.getElementById('ei_alto')?.value)||editandoItem.alto;
+      editandoItem.unid=parseFloat(document.getElementById('ei_unid')?.value)||editandoItem.unid;
+      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
+      editandoItem.refSencillo=parseFloat(document.getElementById('ei_refSencillo')?.value)||0;
+      editandoItem.refPS=parseFloat(document.getElementById('ei_refPS')?.value)||0;
+      editandoItem.refCarton=parseFloat(document.getElementById('ei_refCarton')?.value)||0;
+      editandoItem.cintaDelgadaM=parseFloat(document.getElementById('ei_cintaD')?.value)||0;
+      editandoItem.cintaAcolchadaM=parseFloat(document.getElementById('ei_cintaA')?.value)||0;
+      editandoItem.moH=parseFloat(document.getElementById('ei_moH')?.value)||0;
+      editandoItem.moM=parseFloat(document.getElementById('ei_moM')?.value)||0;
+      // Update refilados
+      const refilados=[];
+      if(editandoItem.refSencillo>0) refilados.push({tipo:'sencillo',n:'Refilado sencillo',cortes:editandoItem.refSencillo,costo:172.97});
+      if(editandoItem.refPS>0) refilados.push({tipo:'ps',n:'Refilado poliestireno',cortes:editandoItem.refPS,costo:356.76});
+      if(editandoItem.refCarton>0) refilados.push({tipo:'carton',n:'Refilado cartón industrial',cortes:editandoItem.refCarton,costo:713.51});
+      editandoItem.refilados=refilados;
+      // Update cintas
+      const cintas=[];
+      if(editandoItem.cintaDelgadaM>0) cintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:editandoItem.cintaDelgadaM,base:1729.73});
+      if(editandoItem.cintaAcolchadaM>0) cintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:editandoItem.cintaAcolchadaM,base:2594.59});
+      editandoItem.cintas=cintas;
+      // Update mano de obra
+      const moH=(editandoItem.moH||0)+(editandoItem.moM||0)/60;
+      editandoItem.manoObra=moH>0?{horas:editandoItem.moH||0,minutos:editandoItem.moM||0,total:moH*35000}:null;
+    }
+    if(tipo==='laser'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||editandoItem.ref;
+      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
+      editandoItem.refSencillo=parseFloat(document.getElementById('ei_refSencillo')?.value)||0;
+      editandoItem.cintaDelgadaM=parseFloat(document.getElementById('ei_cintaD')?.value)||0;
+      editandoItem.cintaAcolchadaM=parseFloat(document.getElementById('ei_cintaA')?.value)||0;
+      editandoItem.moH=parseFloat(document.getElementById('ei_moH')?.value)||0;
+      editandoItem.moM=parseFloat(document.getElementById('ei_moM')?.value)||0;
+      const refilados=[];
+      if(editandoItem.refSencillo>0) refilados.push({tipo:'sencillo',n:'Refilado sencillo',cortes:editandoItem.refSencillo,costo:172.97});
+      editandoItem.refilados=refilados;
+      const cintas=[];
+      if(editandoItem.cintaDelgadaM>0) cintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:editandoItem.cintaDelgadaM,base:1729.73});
+      if(editandoItem.cintaAcolchadaM>0) cintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:editandoItem.cintaAcolchadaM,base:2594.59});
+      editandoItem.cintas=cintas;
+      const moH=(editandoItem.moH||0)+(editandoItem.moM||0)/60;
+      editandoItem.manoObra=moH>0?{horas:editandoItem.moH||0,minutos:editandoItem.moM||0,total:moH*35000}:null;
+    }
+    if(tipo==='otros'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||'';
+      editandoItem.nombre=document.getElementById('ei_nombre')?.value||editandoItem.nombre;
+      editandoItem.precioUnit=parseFloat(document.getElementById('ei_precio')?.value)||editandoItem.precioUnit;
+      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
+      editandoItem.dims=document.getElementById('ei_ancho')?.value&&document.getElementById('ei_alto')?.value?{ancho:parseFloat(document.getElementById('ei_ancho').value),alto:parseFloat(document.getElementById('ei_alto').value)}:editandoItem.dims;
+      const moH=(parseFloat(document.getElementById('ei_moH')?.value)||0)+(parseFloat(document.getElementById('ei_moM')?.value)||0)/60;
+      editandoItem.manoObra=moH>0?{horas:parseFloat(document.getElementById('ei_moH')?.value)||0,minutos:parseFloat(document.getElementById('ei_moM')?.value)||0,total:moH*35000}:null;
+    }
+    if(tipo==='empaque'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||'';
+      editandoItem.largo=parseFloat(document.getElementById('ei_largo')?.value)||editandoItem.largo;
+      editandoItem.ancho=parseFloat(document.getElementById('ei_ancho')?.value)||editandoItem.ancho;
+      editandoItem.alto=parseFloat(document.getElementById('ei_alto')?.value)||editandoItem.alto;
+      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
+      editandoItem.vinipel=document.getElementById('ei_vinipel')?.checked||false;
+      const moH=(parseFloat(document.getElementById('ei_moH')?.value)||0)+(parseFloat(document.getElementById('ei_moM')?.value)||0)/60;
+      editandoItem.manoObra=moH>0?{horas:parseFloat(document.getElementById('ei_moH')?.value)||0,minutos:parseFloat(document.getElementById('ei_moM')?.value)||0,total:moH*35000}:null;
+      // Recalculate fraccion
+      const carton=CARTONES.find(c=>c.id===editandoItem.cartonId)||CARTONES[0];
+      const devW=2*(editandoItem.largo+editandoItem.alto)+2;
+      const devH=editandoItem.ancho+editandoItem.alto+2;
+      editandoItem.fraccion=carton.lamW?Math.ceil((devW*devH)/(carton.lamW*carton.lamH)*1.40*1000)/1000:0;
+    }
+    if(tipo==='corte'){
+      editandoItem.ref=document.getElementById('ei_ref')?.value||'';
+      editandoItem.nombre=document.getElementById('ei_nombre')?.value||'';
+      if(editandoItem.subTipo==='cnc'){
+        editandoItem.distancia=parseFloat(document.getElementById('ei_distancia')?.value)||editandoItem.distancia;
+        editandoItem.speed=document.getElementById('ei_speed')?.value||editandoItem.speed;
+        editandoItem.pasadas=parseInt(document.getElementById('ei_pasadas')?.value)||editandoItem.pasadas;
+      } else {
+        editandoItem.minutos=parseFloat(document.getElementById('ei_minutos')?.value)||editandoItem.minutos;
+      }
+    }
+    cur.items[idx]={...editandoItem};
+  }
+  editandoItem=null;
+  render();
+}
+
+function renderEditItemModal(){
+  if(!editandoItem)return'';
+  const item=editandoItem;
+  const inpStyle='width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none';
+  let fields='';
+
+  const refField='<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Referencia</label>'
+    +'<input id="ei_ref" type="text" value="'+(item.ref||'')+'" style="'+inpStyle+'"></div>';
+
+  if(item.tipo==='vinilo'){
+    fields=refField
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Ancho (cm)</label><input id="ei_ancho" type="number" value="'+(item.ancho||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Alto (cm)</label><input id="ei_alto" type="number" value="'+(item.alto||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Unidades</label><input id="ei_unid" type="number" value="'+(item.unid||1)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cantidad</label><input id="ei_cant" type="number" value="'+(item.cant||1)+'" style="'+inpStyle+'"></div>'
+      +'</div>'
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Refilado sencillo (cortes)</label><input id="ei_refSencillo" type="number" value="'+((item.refilados||[]).find(r=>r.tipo==="sencillo")?.cortes||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Refilado poliestireno (cortes)</label><input id="ei_refPS" type="number" value="'+((item.refilados||[]).find(r=>r.tipo==="ps")?.cortes||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Refilado cartón industrial (cortes)</label><input id="ei_refCarton" type="number" value="'+((item.refilados||[]).find(r=>r.tipo==="carton")?.cortes||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cinta delgada (m)</label><input id="ei_cintaD" type="number" value="'+((item.cintas||[]).find(c=>c.tipo==="delgada")?.metros||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cinta acolchada (m)</label><input id="ei_cintaA" type="number" value="'+((item.cintas||[]).find(c=>c.tipo==="acolchada")?.metros||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (horas)</label><input id="ei_moH" type="number" value="'+(item.manoObra?.horas||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (minutos)</label><input id="ei_moM" type="number" value="'+(item.manoObra?.minutos||0)+'" style="'+inpStyle+'"></div>'
+      +'</div>';
+  }
+  if(item.tipo==='laser'){
+    fields=refField
+      +'<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cantidad</label><input id="ei_cant" type="number" value="'+(item.cant||1)+'" style="'+inpStyle+'"></div>'
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Refilado sencillo (cortes)</label><input id="ei_refSencillo" type="number" value="'+((item.refilados||[]).find(r=>r.tipo==="sencillo")?.cortes||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cinta delgada (m)</label><input id="ei_cintaD" type="number" value="'+((item.cintas||[]).find(c=>c.tipo==="delgada")?.metros||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cinta acolchada (m)</label><input id="ei_cintaA" type="number" value="'+((item.cintas||[]).find(c=>c.tipo==="acolchada")?.metros||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (horas)</label><input id="ei_moH" type="number" value="'+(item.manoObra?.horas||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (minutos)</label><input id="ei_moM" type="number" value="'+(item.manoObra?.minutos||0)+'" style="'+inpStyle+'"></div>'
+      +'</div>';
+  }
+  if(item.tipo==='otros'){
+    fields=refField
+      +'<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Nombre / Descripción</label><input id="ei_nombre" type="text" value="'+(item.nombre||'')+'" style="'+inpStyle+'"></div>'
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Ancho (cm)</label><input id="ei_ancho" type="number" value="'+(item.dims?.ancho||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Alto (cm)</label><input id="ei_alto" type="number" value="'+(item.dims?.alto||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Precio unitario ($)</label><input id="ei_precio" type="number" value="'+(item.precioUnit||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cantidad</label><input id="ei_cant" type="number" value="'+(item.cant||1)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (horas)</label><input id="ei_moH" type="number" value="'+(item.manoObra?.horas||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (minutos)</label><input id="ei_moM" type="number" value="'+(item.manoObra?.minutos||0)+'" style="'+inpStyle+'"></div>'
+      +'</div>';
+  }
+  if(item.tipo==='empaque'){
+    const carton=CARTONES.find(c=>c.id===item.cartonId)||CARTONES[0];
+    const cartonOpts=CARTONES.map(c=>'<option value="'+c.id+'"'+(item.cartonId===c.id?' selected':'')+'>'+c.n+'</option>').join('');
+    fields=refField
+      +'<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Tipo de cartón</label>'
+      +'<select id="ei_carton" style="'+inpStyle+'">'+cartonOpts+'</select></div>'
+      +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Largo (cm)</label><input id="ei_largo" type="number" value="'+(item.largo||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Ancho (cm)</label><input id="ei_ancho" type="number" value="'+(item.ancho||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Alto (cm)</label><input id="ei_alto" type="number" value="'+(item.alto||'')+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Cantidad de cajas</label><input id="ei_cant" type="number" value="'+(item.cant||1)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (horas)</label><input id="ei_moH" type="number" value="'+(item.manoObra?.horas||0)+'" style="'+inpStyle+'"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Mano de obra (minutos)</label><input id="ei_moM" type="number" value="'+(item.manoObra?.minutos||0)+'" style="'+inpStyle+'"></div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+      +'<input type="checkbox" id="ei_vinipel" '+(item.vinipel?'checked':'')+' style="width:18px;height:18px">'
+      +'<label for="ei_vinipel">Incluir vinipel</label>'
+      +'</div>';
+  }
+  if(item.tipo==='corte'){
+    const pasadasOpts=[1,2,3,4,5].map(n=>'<option value="'+n+'"'+(parseInt(item.pasadas)===n?' selected':'')+'>'+n+' pasada'+(n>1?'s':'')+'</option>').join('');
+    fields=refField
+      +'<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Descripción</label><input id="ei_nombre" type="text" value="'+(item.nombre||'')+'" style="'+inpStyle+'"></div>'
+      +(item.subTipo==='cnc'?
+        '<div class="grid2" style="gap:12px;margin-bottom:12px">'
+        +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Distancia (cm lineales)</label><input id="ei_distancia" type="number" value="'+(item.distancia||'')+'" style="'+inpStyle+'"></div>'
+        +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Velocidad (mm/seg)</label>'
+        +'<select id="ei_speed" style="'+inpStyle+'"><option value="15"'+(item.speed==="15"?" selected":"")+'>15 mm/seg</option><option value="30"'+(item.speed==="30"?" selected":"")+'>30 mm/seg</option></select></div>'
+        +'<div><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Pasadas</label>'
+        +'<select id="ei_pasadas" style="'+inpStyle+'">'+pasadasOpts+'</select></div>'
+        +'</div>'
+      :
+        '<div style="margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Minutos de corte</label><input id="ei_minutos" type="number" value="'+(item.minutos||'')+'" style="'+inpStyle+'"></div>'
+      );
+  }
+
+  const tipo=item.tipo==='vinilo'?'Vinilos':item.tipo==='laser'?'Láser':item.tipo==='otros'?'Otros':item.tipo==='empaque'?'Empaque':'Corte';
+  return '<div id="editItemModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:flex-end;justify-content:center">'
+    +'<div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:85vh;display:flex;flex-direction:column">'
+    +'<div style="padding:16px 20px;border-bottom:1px solid #E8E8E8;display:flex;align-items:center;gap:12px">'
+    +'<p style="margin:0;font-weight:800;font-size:16px;flex:1">Editar ítem — '+tipo+'</p>'
+    +'<button onclick="cancelarEditItem()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#5A5A5A">×</button>'
+    +'</div>'
+    +'<div style="overflow-y:auto;flex:1;padding:20px">'
+    +fields
+    +'</div>'
+    +'<div style="padding:16px 20px;border-top:1px solid #E8E8E8;display:flex;gap:10px">'
+    +'<button onclick="cancelarEditItem()" style="flex:1;background:#E8E8E8;border:none;border-radius:6px;padding:12px;font-weight:700;cursor:pointer;font-family:inherit">Cancelar</button>'
+    +'<button onclick="guardarEditItem()" style="flex:1;background:#F5A800;border:none;border-radius:6px;padding:12px;font-weight:700;cursor:pointer;font-family:inherit">✓ Guardar cambios</button>'
+    +'</div></div></div>';
+}
+
 // ── CORTE LASER Y CNC ────────────────────────────────────────────
 function calcCorte(item,tc){
   const precioMin=CORTE_PRECIOS[tc]||CORTE_PRECIOS.tipo2;
+  let raw=0;
   if(item.subTipo==='laser'){
-    return (parseFloat(item.minutos)||0)*precioMin;
+    raw=(parseFloat(item.minutos)||0)*precioMin;
   }
   if(item.subTipo==='cnc'){
-    const dist=(parseFloat(item.distancia)||0)*10; // cm a mm
+    const dist=(parseFloat(item.distancia)||0)*10;
     const speed=parseFloat(item.speed)||15;
     const pasadas=parseInt(item.pasadas)||1;
     const segundos=(dist/speed)*pasadas;
     const minutos=segundos/60;
-    return minutos*precioMin;
+    raw=minutos*precioMin;
   }
-  return 0;
+  return Math.ceil(raw/100)*100;
 }
 
 function calcMinutosCNC(distancia,speed,pasadas){
@@ -875,6 +1301,9 @@ function renderCorte(tc){
       +' · '+mins.toFixed(2)+' min · '+fmt(CORTE_PRECIOS[tc])+'/min</p>'
       +'</div>'
       +'<span style="font-weight:700;font-size:14px;flex-shrink:0">'+fmt(tot)+'</span>'
+      +'<button data-action="moveUp" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:2px">↑</button>'
+      +'<button data-action="moveDown" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:4px">↓</button>'
+      +'<button data-action="editItem" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer;margin-right:4px">✏️</button>'
       +'<button data-action="delItem" data-id="'+item.id+'" class="del">×</button>'
       +'</div>';
   }).join('');
@@ -992,6 +1421,9 @@ function renderEmpaque(){
       +(item.manoObra?'<span class="tag" style="background:#e8eef8;margin-left:4px">MO: '+item.manoObra.horas+'h '+item.manoObra.minutos+'min</span>':'')
       +'</div>'
       +'<span style="font-weight:700;font-size:14px;flex-shrink:0">'+fmt(calc.total)+'</span>'
+      +'<button data-action="moveUp" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:2px">↑</button>'
+      +'<button data-action="moveDown" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:4px">↓</button>'
+      +'<button data-action="editItem" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer;margin-right:4px">✏️</button>'
       +'<button data-action="delItem" data-id="'+item.id+'" class="del">×</button>'
       +'</div>';
   }).join('');
@@ -1193,7 +1625,7 @@ function hideSyncMsg(){
 function calcI_otros(item,d){
   const base=(parseFloat(item.precioUnit)||0)*(parseInt(item.cant)||1);
   const mo=item.manoObra?item.manoObra.total:0;
-  return base+mo;
+  return Math.ceil((base+mo)/100)*100;
 }
 
 function calcRefilados(item,d){
@@ -1224,23 +1656,24 @@ function calcEmpaque(item){
   const costoVinipel=item.vinipel?Math.ceil(devW*devH*3*vinipelPrecioM2*100)/100*(parseInt(item.cant)||1)*d:0;
   const moH=(parseFloat(item.manoObra?.horas)||0)+(parseFloat(item.manoObra?.minutos)||0)/60;
   const costoMO=moH*35000*d;
-  return {costoCarton,costoVinipel,costoMO,fraccion,total:costoCarton+costoVinipel+costoMO};
+  const totalEmp=costoCarton+costoVinipel+costoMO;
+  return {costoCarton,costoVinipel,costoMO,fraccion,total:Math.ceil(totalEmp/100)*100};
 }
 
 function calcI(item,d){
   if(item.tipo==="otros") return calcI_otros(item,d);
   if(item.tipo==="empaque") return calcEmpaque(item).total;
-  if(item.tipo==="empaque_mat") return (parseFloat(item.precioUnit)||0)*(parseInt(item.cant)||1)*DESC.tipo1;
+  if(item.tipo==="empaque_mat") return Math.ceil(((parseFloat(item.precioUnit)||0)*(parseInt(item.cant)||1)*DESC.tipo1)/100)*100;
   if(item.tipo==="corte") return calcCorte(item,d);
   if(item.tipo==="vinilo"){
     const cm2=item.ancho*item.alto*(item.unid||1);
     const base=item.subs.reduce((s,si)=>s+cm2*si.p*(si.dosCaras?2:1),0)*(item.cant||1)*d;
-    return base+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d);
+    return Math.ceil((base+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d))/100)*100;
   }
   if(item.tipo==="laser"){
     const base=(LBASE[item.mod]?.[item.tam]||0)+(item.pPap||0);
     const acabadosTotal=(item.acabados||[]).reduce((s,a)=>s+(a.p||0),0);
-    return(base+acabadosTotal)*(item.cant||1)*d+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d);
+    return Math.ceil(((base+acabadosTotal)*(item.cant||1)*d+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d))/100)*100;
   }
   return 0;
 }
@@ -1276,6 +1709,9 @@ function render(){
         }
         else if(action==='cancelDesc'){editandoDesc=null;render();}
         else if(action==='delItem'){delItem(id);}
+        else if(action==='editItem'){editarItem(id);}
+        else if(action==='moveUp'){moveItem(id,-1);}
+        else if(action==='moveDown'){moveItem(id,1);}
         else if(action==='setCorte'){cTipo=this.dataset.val;render();}
         else if(action==='addCorte'){addCorte(cur.tc||'tipo2');}
         else if(action==='subirImg'){subirImagenItem(id);}
@@ -1292,6 +1728,9 @@ function render(){
   const modalHtml=renderCliModal();
   if(modalHtml){const m=document.createElement('div');m.id='cliModalWrap';m.innerHTML=modalHtml;document.body.appendChild(m);}
   else{const old=document.getElementById('cliModalWrap');if(old)old.remove();}
+  const editModalHtml=renderEditItemModal();
+  if(editModalHtml){const em=document.createElement('div');em.id='editItemWrap';em.innerHTML=editModalHtml;document.body.appendChild(em);}
+  else{const old=document.getElementById('editItemWrap');if(old)old.remove();}
 
   // Restore scroll positions after re-render
   document.querySelectorAll('.list').forEach(el=>{if(el.id&&scrolls[el.id])el.scrollTop=scrolls[el.id];});
@@ -1326,7 +1765,22 @@ function nuevaCot(){
   const hoy=new Date().toISOString().slice(0,10);cur={id:null,num:'',fecha:hoy,cli:'',cont:'',tc:'tipo2',proyecto:'',notas:'',items:[]};
   vTab='info'; screen='editor'; resetVinilo(); render();
 }
-function abrirCot(id){cur={...cots.find(c=>c.id===id)};vTab='info';screen='editor';resetVinilo();render();}
+function abrirCot(id){
+  cur={...cots.find(c=>c.id===id)};
+  cur.items=(cur.items||[]).map(i=>({...i,
+    subs:i.subs?i.subs.map(s=>({...s})):i.subs,
+    acabados:i.acabados?[...i.acabados]:i.acabados,
+    refilados:i.refilados?[...i.refilados]:i.refilados,
+    cintas:i.cintas?[...i.cintas]:i.cintas
+  }));
+  vTab='info';screen='editor';resetVinilo();render();
+  // Auto-save to update totals with new rounding
+  setTimeout(()=>{
+    cots=cots.map(c=>c.id===cur.id?cur:c);
+    saveCots();
+    pushCotizacionToGS(cur);
+  },500);
+}
 async function eliminarCot(id){
   const pin=prompt('Ingresa la clave de administrador para eliminar:');
   if(pin===null)return;
@@ -1461,7 +1915,7 @@ function renderVinilo(d){
         </div>
       </div>
       <span style="font-weight:700;font-size:14px;flex-shrink:0">${fmt(calcI(item,d))}</span>
-      <button class="del" onclick="delItem('${item.id}')">×</button>
+      <button onclick="moveItem('${item.id}',-1)" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:2px">↑</button><button onclick="moveItem('${item.id}',1)" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:4px">↓</button><button onclick="editarItem('${item.id}')" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer;margin-right:4px">✏️</button><button class="del" onclick="delItem('${item.id}')">×</button>
     </div>`;
   }).join('');
 
@@ -1665,6 +2119,19 @@ function addVinilo(){
   cur.items=[...cur.items,item];
   resetVinilo();render();
 }
+function moveItem(id, dir){
+  const idx=cur.items.findIndex(i=>i.id===id);
+  if(idx===-1)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=cur.items.length)return;
+  const items=[...cur.items];
+  const tmp=items[idx];
+  items[idx]=items[newIdx];
+  items[newIdx]=tmp;
+  cur.items=items;
+  render();
+}
+
 function delItem(id){cur.items=cur.items.filter(i=>i.id!==id);render();}
 
 function renderLaser(d){
@@ -1691,7 +2158,7 @@ function renderLaser(d){
       <div style="margin-top:6px">${addImgBtn}</div>
     </div>
     <span style="font-weight:700;font-size:14px;flex-shrink:0">${fmt(calcI(item,d))}</span>
-    <button class="del" onclick="delItem('${item.id}')">×</button>
+    <button onclick="moveItem('${item.id}',-1)" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:2px">↑</button><button onclick="moveItem('${item.id}',1)" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;margin-right:4px">↓</button><button onclick="editarItem('${item.id}')" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer;margin-right:4px">✏️</button><button class="del" onclick="delItem('${item.id}')">×</button>
   </div>`;
 }).join('');;
   return`<div class="card" style="margin-bottom:16px">
@@ -2285,15 +2752,22 @@ function saveAdminModal(){
 
 
 // ── INIT ─────────────────────────────────────────────────────────
-loadPreciosLocal().then(()=>{
-loadCots().then(()=>{
-  loadClientes().then(()=>{
-    render();
-    // Sync from GS in background
-    syncPreciosFromGS().then(()=>syncCotizaciones()).then(()=>syncClientes()).then(()=>render());
-  });
-});
-});
+// Show loading screen immediately
+document.getElementById('app').innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;gap:12px"><p style="font-size:14px;color:#5A5A5A">Cargando cotizaciones...</p></div>';
+
+async function initApp(){
+  await loadPreciosLocal();
+  await loadCots();
+  await loadClientes();
+  // Always sync from GS first before showing data
+  try{
+    await syncPreciosFromGS();
+    await syncCotizaciones();
+    await syncClientes();
+  }catch(e){console.log('Sync error:',e);}
+  render();
+}
+initApp();
 </script>
 </body>
 </html>
