@@ -1472,9 +1472,12 @@ const GS_URL='https://script.google.com/macros/s/AKfycbwMTs0tbn4wWmnuNNzt6uxmOQ1
 
 async function gsCall(params){
   try{
-    // Always use GET with URL params - works reliably with Apps Script e.parameter
-    const url=GS_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)).join('&');
-    const r=await fetch(url);
+    const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)).join('&');
+    const r=await fetch(GS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:qs
+    });
     return await r.json();
   }catch(e){console.error('GS error:',e);return {error:e.toString()};}
 }
@@ -1518,18 +1521,24 @@ async function pushClientesToGS(){
 }
 
 async function pushCotizacionToGS(cot){
-  // Ensure descCustom and other optional fields are explicitly included
+  // 1. Save cotizacion data without images
   const items=(cot.items||[]).map(function(item){
-    return Object.assign({},item,{
+    const it=Object.assign({},item,{
       descCustom:item.descCustom||null,
       subs:item.subs||[],
       refilados:item.refilados||[],
       cintas:item.cintas||[]
     });
+    delete it.img;
+    return it;
   });
-  console.log('pushCotizacionToGS - items[0].ref=',items[0]?.ref,'items[0].descCustom=',items[0]?.descCustom);
   const cotToSave={...cot,items:JSON.stringify(items),total:calcT(cot)};
   const r=await gsCall({action:'saveCotizacion',data:cotToSave});
+  // 2. Save images separately (items that have images)
+  const imgs=(cot.items||[]).filter(i=>i.img).map(i=>({id:i.id,img:i.img}));
+  if(imgs.length){
+    await gsCall({action:'saveImagenes',cotId:cot.id,data:imgs});
+  }
   console.log('pushCotizacionToGS result:',JSON.stringify(r));
   return r;
 }
