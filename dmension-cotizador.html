@@ -351,98 +351,6 @@ function editarItem(id){
 
 function cancelarEditItem(){editandoItem=null;render();}
 
-function guardarEditItem(){
-  if(!editandoItem)return;
-  const idx=cur.items.findIndex(i=>i.id===editandoItem.id);
-  if(idx>-1){
-    // Read updated values from form
-    const tipo=editandoItem.tipo;
-    if(tipo==='vinilo'){
-      editandoItem.ref=document.getElementById('ei_ref')?.value||editandoItem.ref;
-      editandoItem.ancho=parseFloat(document.getElementById('ei_ancho')?.value)||editandoItem.ancho;
-      editandoItem.alto=parseFloat(document.getElementById('ei_alto')?.value)||editandoItem.alto;
-      editandoItem.unid=parseFloat(document.getElementById('ei_unid')?.value)||editandoItem.unid;
-      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
-      editandoItem.refSencillo=parseFloat(document.getElementById('ei_refSencillo')?.value)||0;
-      editandoItem.refPS=parseFloat(document.getElementById('ei_refPS')?.value)||0;
-      editandoItem.refCarton=parseFloat(document.getElementById('ei_refCarton')?.value)||0;
-      editandoItem.cintaDelgadaM=parseFloat(document.getElementById('ei_cintaD')?.value)||0;
-      editandoItem.cintaAcolchadaM=parseFloat(document.getElementById('ei_cintaA')?.value)||0;
-      editandoItem.moH=parseFloat(document.getElementById('ei_moH')?.value)||0;
-      editandoItem.moM=parseFloat(document.getElementById('ei_moM')?.value)||0;
-      // Update refilados
-      const refilados=[];
-      if(editandoItem.refSencillo>0) refilados.push({tipo:'sencillo',n:'Refilado sencillo',cortes:editandoItem.refSencillo,costo:172.97});
-      if(editandoItem.refPS>0) refilados.push({tipo:'ps',n:'Refilado poliestireno',cortes:editandoItem.refPS,costo:356.76});
-      if(editandoItem.refCarton>0) refilados.push({tipo:'carton',n:'Refilado cartón industrial',cortes:editandoItem.refCarton,costo:713.51});
-      editandoItem.refilados=refilados;
-      // Update cintas
-      const cintas=[];
-      if(editandoItem.cintaDelgadaM>0) cintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:editandoItem.cintaDelgadaM,base:1729.73});
-      if(editandoItem.cintaAcolchadaM>0) cintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:editandoItem.cintaAcolchadaM,base:2594.59});
-      editandoItem.cintas=cintas;
-      // Update mano de obra
-      const moH=(editandoItem.moH||0)+(editandoItem.moM||0)/60;
-      editandoItem.manoObra=moH>0?{horas:editandoItem.moH||0,minutos:editandoItem.moM||0,total:moH*35000}:null;
-    }
-    if(tipo==='laser'){
-      editandoItem.ref=document.getElementById('ei_ref')?.value||editandoItem.ref;
-      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
-      editandoItem.refSencillo=parseFloat(document.getElementById('ei_refSencillo')?.value)||0;
-      editandoItem.cintaDelgadaM=parseFloat(document.getElementById('ei_cintaD')?.value)||0;
-      editandoItem.cintaAcolchadaM=parseFloat(document.getElementById('ei_cintaA')?.value)||0;
-      editandoItem.moH=parseFloat(document.getElementById('ei_moH')?.value)||0;
-      editandoItem.moM=parseFloat(document.getElementById('ei_moM')?.value)||0;
-      const refilados=[];
-      if(editandoItem.refSencillo>0) refilados.push({tipo:'sencillo',n:'Refilado sencillo',cortes:editandoItem.refSencillo,costo:172.97});
-      editandoItem.refilados=refilados;
-      const cintas=[];
-      if(editandoItem.cintaDelgadaM>0) cintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:editandoItem.cintaDelgadaM,base:1729.73});
-      if(editandoItem.cintaAcolchadaM>0) cintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:editandoItem.cintaAcolchadaM,base:2594.59});
-      editandoItem.cintas=cintas;
-      const moH=(editandoItem.moH||0)+(editandoItem.moM||0)/60;
-      editandoItem.manoObra=moH>0?{horas:editandoItem.moH||0,minutos:editandoItem.moM||0,total:moH*35000}:null;
-    }
-    if(tipo==='otros'){
-      editandoItem.ref=document.getElementById('ei_ref')?.value||'';
-      editandoItem.nombre=document.getElementById('ei_nombre')?.value||editandoItem.nombre;
-      editandoItem.precioUnit=parseFloat(document.getElementById('ei_precio')?.value)||editandoItem.precioUnit;
-      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
-      editandoItem.dims=document.getElementById('ei_ancho')?.value&&document.getElementById('ei_alto')?.value?{ancho:parseFloat(document.getElementById('ei_ancho').value),alto:parseFloat(document.getElementById('ei_alto').value)}:editandoItem.dims;
-      const moH=(parseFloat(document.getElementById('ei_moH')?.value)||0)+(parseFloat(document.getElementById('ei_moM')?.value)||0)/60;
-      editandoItem.manoObra=moH>0?{horas:parseFloat(document.getElementById('ei_moH')?.value)||0,minutos:parseFloat(document.getElementById('ei_moM')?.value)||0,total:moH*35000}:null;
-    }
-    if(tipo==='empaque'){
-      editandoItem.ref=document.getElementById('ei_ref')?.value||'';
-      editandoItem.largo=parseFloat(document.getElementById('ei_largo')?.value)||editandoItem.largo;
-      editandoItem.ancho=parseFloat(document.getElementById('ei_ancho')?.value)||editandoItem.ancho;
-      editandoItem.alto=parseFloat(document.getElementById('ei_alto')?.value)||editandoItem.alto;
-      editandoItem.cant=parseInt(document.getElementById('ei_cant')?.value)||editandoItem.cant;
-      editandoItem.vinipel=document.getElementById('ei_vinipel')?.checked||false;
-      const moH=(parseFloat(document.getElementById('ei_moH')?.value)||0)+(parseFloat(document.getElementById('ei_moM')?.value)||0)/60;
-      editandoItem.manoObra=moH>0?{horas:parseFloat(document.getElementById('ei_moH')?.value)||0,minutos:parseFloat(document.getElementById('ei_moM')?.value)||0,total:moH*35000}:null;
-      // Recalculate fraccion
-      const carton=CARTONES.find(c=>c.id===editandoItem.cartonId)||CARTONES[0];
-      const devW=2*(editandoItem.largo+editandoItem.alto)+2;
-      const devH=editandoItem.ancho+editandoItem.alto+2;
-      editandoItem.fraccion=carton.lamW?Math.ceil((devW*devH)/(carton.lamW*carton.lamH)*1.40*1000)/1000:0;
-    }
-    if(tipo==='corte'){
-      editandoItem.ref=document.getElementById('ei_ref')?.value||'';
-      editandoItem.nombre=document.getElementById('ei_nombre')?.value||'';
-      if(editandoItem.subTipo==='cnc'){
-        editandoItem.distancia=parseFloat(document.getElementById('ei_distancia')?.value)||editandoItem.distancia;
-        editandoItem.speed=document.getElementById('ei_speed')?.value||editandoItem.speed;
-        editandoItem.pasadas=parseInt(document.getElementById('ei_pasadas')?.value)||editandoItem.pasadas;
-      } else {
-        editandoItem.minutos=parseFloat(document.getElementById('ei_minutos')?.value)||editandoItem.minutos;
-      }
-    }
-    cur.items[idx]={...editandoItem};
-  }
-  editandoItem=null;
-  render();
-}
 
 function renderEditItemModal(){
   if(!editandoItem)return'';
@@ -535,8 +443,6 @@ function renderEditItemModal(){
     +'<div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:85vh;display:flex;flex-direction:column">'
     +'<div style="padding:16px 20px;border-bottom:1px solid #E8E8E8;display:flex;align-items:center;gap:12px">'
     +'<p style="margin:0;font-weight:800;font-size:16px;flex:1">Editar ítem — '+tipo+'</p>'
-    +'<button onclick="cancelarEditItem()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#5A5A5A">×</button>'
-    +'</div>'
     +'<div style="overflow-y:auto;flex:1;padding:20px">'
     +fields
     +'</div>'
@@ -714,6 +620,7 @@ let dosCarasSet=new Set(); // ids of selected items marked as 2 caras
 let vCintaDelgada="0", vCintaAcolchada="0", vCintaDelgadaUnit="cm", vCintaAcolchadaUnit="cm";
 let oRef="", oNombre="", oPrecio="", oCant="1", oMOHoras="0", oMOMinutos="0", oAncho="", oAlto="";
 let editandoDesc=null; // itemId being edited
+let editandoItem=null; // full item being edited
 let selAcabados=[];
 let adminMode=false;
 let showCliModal=false;
@@ -765,7 +672,14 @@ function quitarImagenItem(itemId){
 
 const fmt=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n);
 const fmtCm2=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
-const fmtFecha=f=>{if(!f)return'';const[y,m,d]=f.split('-');return new Date(y,m-1,d).toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});};
+const fmtFecha=f=>{
+  if(!f)return'';
+  // Handle ISO datetime strings from Sheets
+  const clean=typeof f==='string'?f.split('T')[0]:f;
+  const parts=String(clean).split('-');
+  if(parts.length===3){const[y,m,d]=parts;return new Date(parseInt(y),parseInt(m)-1,parseInt(d)).toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});}
+  return String(f);
+};
 const uid=()=>Math.random().toString(36).slice(2,9);
 const SK="dmension_html_v1";
 const SK_PRECIOS="dmension_precios_v1";
@@ -790,8 +704,9 @@ function editarDesc(itemId){
 function guardarDesc(itemId){
   const el=document.getElementById('descEdit_'+itemId);
   if(el){
-    const item=cur.items.find(i=>i.id===itemId);
-    if(item) item.descCustom=el.value;
+    const val=el.value;
+    cur.items=cur.items.map(i=>i.id===itemId?{...i,descCustom:val}:i);
+    cots=cots.map(c=>c.id===cur.id?{...cur,items:[...cur.items]}:c);
   }
   editandoDesc=null;
   render();
@@ -801,8 +716,8 @@ function cancelarDesc(itemId){
   render();
 }
 function resetDesc(itemId){
-  const item=cur.items.find(i=>i.id===itemId);
-  if(item) delete item.descCustom;
+  cur.items=cur.items.map(i=>i.id===itemId?{...i,descCustom:undefined}:i);
+  cots=cots.map(c=>c.id===cur.id?{...cur,items:[...cur.items]}:c);
   editandoDesc=null;
   render();
 }
@@ -1128,7 +1043,11 @@ function guardarEditItem(){
         editandoItem.minutos=parseFloat(document.getElementById('ei_minutos')?.value)||editandoItem.minutos;
       }
     }
-    cur.items[idx]={...editandoItem};
+    const newItems=cur.items.map((it,i)=>i===idx?{...editandoItem}:it);
+    const updatedCur={...cur,items:newItems};
+    cots=cots.map(c=>c.id===updatedCur.id?updatedCur:c);
+    cur=cots.find(c=>c.id===updatedCur.id)||updatedCur;
+    console.log('guardarEditItem done - ref=',cur.items[0]?.ref);
   }
   editandoItem=null;
   render();
@@ -1553,18 +1472,10 @@ const GS_URL='https://script.google.com/macros/s/AKfycbwMTs0tbn4wWmnuNNzt6uxmOQ1
 
 async function gsCall(params){
   try{
-    // Use POST for large data, GET for simple queries
-    const hasLargeData=params.data&&JSON.stringify(params.data).length>1000;
-    if(hasLargeData){
-      const formData=new FormData();
-      Object.entries(params).forEach(([k,v])=>formData.append(k,typeof v==='object'?JSON.stringify(v):v));
-      const r=await fetch(GS_URL,{method:'POST',body:formData});
-      return await r.json();
-    } else {
-      const url=GS_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)).join('&');
-      const r=await fetch(url);
-      return await r.json();
-    }
+    // Always use GET with URL params - works reliably with Apps Script e.parameter
+    const url=GS_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)).join('&');
+    const r=await fetch(url);
+    return await r.json();
   }catch(e){console.error('GS error:',e);return {error:e.toString()};}
 }
 
@@ -1587,15 +1498,17 @@ async function syncCotizaciones(){
   const r=await gsCall({action:'getCotizaciones'});
   if(r.data){
     const fromGS=r.data.map(c=>({...c,items:typeof c.items==='string'?JSON.parse(c.items||'[]'):c.items||[]}));
-    const localIds=new Set(cots.map(c=>c.id));
+    // Log first item ref of each cot to check descCustom
+    console.log('fromGS items detail:', JSON.stringify(fromGS.map(c=>({id:c.id,num:c.num,items:c.items.map(i=>({id:i.id,ref:i.ref,descCustom:i.descCustom||'NONE'}))}))));
     const gsIds=new Set(fromGS.map(c=>c.id));
-    // Local always wins - only add from GS what doesn't exist locally
-    const gsOnly=fromGS.filter(c=>!localIds.has(c.id));
-    cots=[...cots,...gsOnly];
+    // Keep local-only items (not yet in GS) and upload them
+    const localOnly=cots.filter(c=>!gsIds.has(c.id));
+    // GS is always the source of truth for existing items
+    cots=[...fromGS,...localOnly];
     if(cots.length)cnt=Math.max(...cots.map(c=>parseInt(c.num)||0))+1;
     await saveCots();
-    // Push all local cots to GS to keep it updated
-    for(const c of cots) await pushCotizacionToGS(c);
+    // Only push items that don't exist in GS yet
+    for(const c of localOnly) await pushCotizacionToGS(c);
   }
   hideSyncMsg();
 }
@@ -1605,8 +1518,20 @@ async function pushClientesToGS(){
 }
 
 async function pushCotizacionToGS(cot){
-  const cotToSave={...cot,items:JSON.stringify(cot.items||[]),total:calcT(cot)};
-  await gsCall({action:'saveCotizacion',data:cotToSave});
+  // Ensure descCustom and other optional fields are explicitly included
+  const items=(cot.items||[]).map(function(item){
+    return Object.assign({},item,{
+      descCustom:item.descCustom||null,
+      subs:item.subs||[],
+      refilados:item.refilados||[],
+      cintas:item.cintas||[]
+    });
+  });
+  console.log('pushCotizacionToGS - items[0].ref=',items[0]?.ref,'items[0].descCustom=',items[0]?.descCustom);
+  const cotToSave={...cot,items:JSON.stringify(items),total:calcT(cot)};
+  const r=await gsCall({action:'saveCotizacion',data:cotToSave});
+  console.log('pushCotizacionToGS result:',JSON.stringify(r));
+  return r;
 }
 
 async function deleteCotizacionFromGS(id){
@@ -1704,8 +1629,13 @@ function render(){
         if(action==='editDesc') editarDesc(id);
         else if(action==='saveDesc'){
           const ta=document.querySelector('[data-descid="'+id+'"]');
-          const item=cur.items.find(i=>i.id===id);
-          if(item&&ta) item.descCustom=ta.value;
+          if(ta){
+            const val=ta.value;
+            // Update cur.items directly
+            cur.items=cur.items.map(i=>i.id===id?{...i,descCustom:val}:i);
+            // Update cots array
+            cots=cots.map(c=>c.id===cur.id?{...cur,items:[...cur.items]}:c);
+          }
           editandoDesc=null;render();
         }
         else if(action==='cancelDesc'){editandoDesc=null;render();}
@@ -1775,12 +1705,6 @@ function abrirCot(id){
     cintas:i.cintas?[...i.cintas]:i.cintas
   }));
   vTab='info';screen='editor';resetVinilo();render();
-  // Auto-save to update totals with new rounding
-  setTimeout(()=>{
-    cots=cots.map(c=>c.id===cur.id?cur:c);
-    saveCots();
-    pushCotizacionToGS(cur);
-  },500);
 }
 async function eliminarCot(id){
   const pin=prompt('Ingresa la clave de administrador para eliminar:');
@@ -1793,8 +1717,14 @@ async function eliminarCot(id){
   render();
 }
 async function guardarCot(){
+  // Get the latest version from cots (already updated by guardarEditItem/guardarDesc)
+  if(cur.id){
+    const latest=cots.find(c=>c.id===cur.id);
+    if(latest) cur=latest;
+  }
+  console.log('guardarCot ref=',cur.items[0]?.ref);
   if(!cur.id){cur={...cur,id:uid()};cots=[...cots,cur];}
-  else cots=cots.map(c=>c.id===cur.id?cur:c);
+  else cots=cots.map(c=>c.id===cur.id?{...cur}:c);
   await saveCots();
   showSyncMsg('Guardando en Google Sheets...');
   const r=await pushCotizacionToGS(cur);
@@ -1861,7 +1791,7 @@ function renderInfo(){
       <div style="grid-column:1/-1"><label>Nombre / Empresa</label><input value="${cur.cli||''}" oninput="cur.cli=this.value" placeholder="Nombre del cliente"></div>
       <div><label>Contacto</label><input value="${cur.cont||''}" oninput="cur.cont=this.value" placeholder="Nombre de la persona encargada"></div>
       <div><label>Número de cotización</label><input type="text" value="${cur.num||''}" oninput="cur.num=this.value" placeholder="Ej: 0042" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
-      <div><label>Fecha de cotización</label><input type="date" value="${cur.fecha||''}" oninput="cur.fecha=this.value" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
+      <div><label>Fecha de cotización</label><input type="date" value="${(cur.fecha||'').split('T')[0]}" oninput="cur.fecha=this.value" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
       <div><label>Tipo de cliente</label><select onchange="cur.tc=this.value">${Object.entries(TLBL).map(([k,v])=>`<option value="${k}"${cur.tc===k?' selected':''}>${v}</option>`).join('')}</select></div>
       <div style="grid-column:1/-1"><label>Nombre del proyecto</label><input value="${cur.proyecto||''}" oninput="cur.proyecto=this.value" placeholder="Ej: Pendones feria 2025, Tarjetas corporativas..."></div>
       <div style="grid-column:1/-1"><label>Notas</label><input value="${cur.notas||''}" oninput="cur.notas=this.value" placeholder="Observaciones opcionales"></div>
