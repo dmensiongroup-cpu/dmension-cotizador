@@ -1587,14 +1587,15 @@ async function syncCotizaciones(){
   const r=await gsCall({action:'getCotizaciones'});
   if(r.data){
     const fromGS=r.data.map(c=>({...c,items:typeof c.items==='string'?JSON.parse(c.items||'[]'):c.items||[]}));
+    const localIds=new Set(cots.map(c=>c.id));
     const gsIds=new Set(fromGS.map(c=>c.id));
-    // Keep local cots that haven't made it to GS yet
-    const localOnly=cots.filter(c=>!gsIds.has(c.id));
-    cots=[...fromGS,...localOnly];
+    // Local always wins - only add from GS what doesn't exist locally
+    const gsOnly=fromGS.filter(c=>!localIds.has(c.id));
+    cots=[...cots,...gsOnly];
     if(cots.length)cnt=Math.max(...cots.map(c=>parseInt(c.num)||0))+1;
     await saveCots();
-    // Push local-only cots to GS
-    for(const c of localOnly) await pushCotizacionToGS(c);
+    // Push all local cots to GS to keep it updated
+    for(const c of cots) await pushCotizacionToGS(c);
   }
   hideSyncMsg();
 }
@@ -1795,8 +1796,15 @@ async function guardarCot(){
   if(!cur.id){cur={...cur,id:uid()};cots=[...cots,cur];}
   else cots=cots.map(c=>c.id===cur.id?cur:c);
   await saveCots();
-  pushCotizacionToGS(cur);
-  alert('✅ Cotización guardada');render();
+  showSyncMsg('Guardando en Google Sheets...');
+  const r=await pushCotizacionToGS(cur);
+  hideSyncMsg();
+  if(r&&r.error){
+    alert('⚠️ Guardado localmente pero no se pudo sincronizar con Google Sheets. Intenta de nuevo.');
+  } else {
+    alert('✅ Cotización guardada y sincronizada');
+  }
+  render();
 }
 function resetVinilo(){selP=[];selM=[];dosCarasSet=new Set();bP='';bM='';vAncho='';vAlto='';vUnid='1';vCant='1';vRef='';vRefSencillo='0';vRefPS='0';vRefCarton='0';vMOHoras='0';vMOMinutos='0';vCintaDelgada='0';vCintaAcolchada='0';vCintaDelgadaUnit='cm';vCintaAcolchadaUnit='cm';sCatP='Todos';sCatM='Todos';}
 function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos='0';lCintaDelgada='0';lCintaAcolchada='0';lCintaDelgadaUnit='cm';lCintaAcolchadaUnit='cm';selAcabados=[];}
