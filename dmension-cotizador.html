@@ -1534,10 +1534,10 @@ async function pushCotizacionToGS(cot){
   });
   const cotToSave={...cot,items:JSON.stringify(items),total:calcT(cot)};
   const r=await gsCall({action:'saveCotizacion',data:cotToSave});
-  // 2. Save images separately (items that have images)
-  const imgs=(cot.items||[]).filter(i=>i.img).map(i=>({id:i.id,img:i.img}));
-  if(imgs.length){
-    await gsCall({action:'saveImagenes',cotId:cot.id,data:imgs});
+  // 2. Save each image individually to avoid size limits
+  const itemsWithImgs=(cot.items||[]).filter(i=>i.img);
+  for(const item of itemsWithImgs){
+    await gsCall({action:'saveImagen',cotId:cot.id,itemId:item.id,data:item.img});
   }
   console.log('pushCotizacionToGS result:',JSON.stringify(r));
   return r;
