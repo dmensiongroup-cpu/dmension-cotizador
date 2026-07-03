@@ -618,6 +618,7 @@ let vRefSencillo="0", vRefPS="0", vRefCarton="0";
 let vMOHoras="0", vMOMinutos="0";
 let dosCarasSet=new Set(); // ids of selected items marked as 2 caras
 let vCintaDelgada="0", vCintaAcolchada="0", vCintaDelgadaUnit="cm", vCintaAcolchadaUnit="cm";
+let vCorteTipo="none", vCorteDistancia="0", vCorteSpeed="15", vCortePasadas="1", vCorteMinutos="0";
 let oRef="", oNombre="", oPrecio="", oCant="1", oMOHoras="0", oMOMinutos="0", oAncho="", oAlto="";
 let editandoDesc=null; // itemId being edited
 let editandoItem=null; // full item being edited
@@ -629,6 +630,7 @@ const ADMIN_PIN="1234";
 let adminTab="procesos";
 let adminEditId=null;
 let lMod="tiro_color", lTam="carta", lFi=0, lGi=0, lCant="1", lRef="", lRefSencillo="0", lMOHoras="0", lMOMinutos="0", lCintaDelgada="0", lCintaAcolchada="0", lCintaDelgadaUnit="cm", lCintaAcolchadaUnit="cm";
+let lCorteTipo="none", lCorteDistancia="0", lCorteSpeed="15", lCortePasadas="1", lCorteMinutos="0";
 let cRef="", cTipo="cnc", cDistancia="", cSpeed="15", cPasadas="1", cMinutosLaser="", cNombre="";
 let eRef="", eCartonId="cs", eLargo="", eAncho="", eAlto="", eCant="1", eVinipel=false, eMOHoras="0", eMOMinutos="0";
 let eMaterialNombre="", eMaterialPrecio="", eMaterialCant="1";
@@ -1570,6 +1572,22 @@ function toMetros(val, unit){ return unit==='m' ? parseFloat(val)||0 : (parseFlo
 function calcCintas(item,d){
   return (item.cintas||[]).reduce((s,c)=>s+c.metros*c.base*d,0);
 }
+function calcCorteItem(item,d){
+  if(!item.corte||item.corte.tipo==='none') return 0;
+  const tc=d>=1?'tipo3':d>=0.925?'tipo2':d>=0.854?'tipo1':'empleado';
+  const precioMin=CORTE_PRECIOS[tc]||CORTE_PRECIOS.tipo2;
+  if(item.corte.tipo==='laser'){
+    return Math.ceil(((parseFloat(item.corte.minutos)||0)*precioMin)/100)*100;
+  }
+  if(item.corte.tipo==='cnc'){
+    const dist=(parseFloat(item.corte.distancia)||0)*10;
+    const speed=parseFloat(item.corte.speed)||15;
+    const pasadas=parseInt(item.corte.pasadas)||1;
+    const minutos=(dist/speed)*pasadas/60;
+    return Math.ceil((minutos*precioMin)/100)*100;
+  }
+  return 0;
+}
 function calcManoObra(item,d){
   return item.manoObra?item.manoObra.total*d:0;
 }
@@ -1603,12 +1621,12 @@ function calcI(item,d){
   if(item.tipo==="vinilo"){
     const cm2=item.ancho*item.alto*(item.unid||1);
     const base=item.subs.reduce((s,si)=>s+cm2*si.p*(si.dosCaras?2:1),0)*(item.cant||1)*d;
-    return Math.ceil((base+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d))/100)*100;
+    return Math.ceil((base+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d)+calcCorteItem(item,d))/100)*100;
   }
   if(item.tipo==="laser"){
     const base=(LBASE[item.mod]?.[item.tam]||0)+(item.pPap||0);
     const acabadosTotal=(item.acabados||[]).reduce((s,a)=>s+(a.p||0),0);
-    return Math.ceil(((base+acabadosTotal)*(item.cant||1)*d+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d))/100)*100;
+    return Math.ceil(((base+acabadosTotal)*(item.cant||1)*d+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d)+calcCorteItem(item,d))/100)*100;
   }
   return 0;
 }
@@ -1745,8 +1763,8 @@ async function guardarCot(){
   }
   render();
 }
-function resetVinilo(){selP=[];selM=[];dosCarasSet=new Set();bP='';bM='';vAncho='';vAlto='';vUnid='1';vCant='1';vRef='';vRefSencillo='0';vRefPS='0';vRefCarton='0';vMOHoras='0';vMOMinutos='0';vCintaDelgada='0';vCintaAcolchada='0';vCintaDelgadaUnit='cm';vCintaAcolchadaUnit='cm';sCatP='Todos';sCatM='Todos';}
-function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos='0';lCintaDelgada='0';lCintaAcolchada='0';lCintaDelgadaUnit='cm';lCintaAcolchadaUnit='cm';selAcabados=[];}
+function resetVinilo(){selP=[];selM=[];dosCarasSet=new Set();bP='';bM='';vAncho='';vAlto='';vUnid='1';vCant='1';vRef='';vRefSencillo='0';vRefPS='0';vRefCarton='0';vMOHoras='0';vMOMinutos='0';vCintaDelgada='0';vCintaAcolchada='0';vCintaDelgadaUnit='cm';vCintaAcolchadaUnit='cm';vCorteTipo='none';vCorteDistancia='0';vCorteSpeed='15';vCortePasadas='1';vCorteMinutos='0';sCatP='Todos';sCatM='Todos';}
+function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos='0';lCintaDelgada='0';lCintaAcolchada='0';lCintaDelgadaUnit='cm';lCintaAcolchadaUnit='cm';lCorteTipo='none';lCorteDistancia='0';lCorteSpeed='15';lCortePasadas='1';lCorteMinutos='0';selAcabados=[];}
 
 function renderEditor(){
   const d=DESC[cur.tc]||1;
@@ -1917,6 +1935,39 @@ function renderVinilo(d){
       </div>
     </div>
     <div style="margin-top:4px;margin-bottom:16px;background:#f8f8f8;border-radius:8px;padding:14px">
+      <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Corte incluido</p>
+      <div style="margin-bottom:10px">
+        <label>Tipo de corte</label>
+        <select onchange="vCorteTipo=this.value;render()" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+          <option value="none" ${vCorteTipo==="none"?"selected":""}>Sin corte</option>
+          <option value="laser" ${vCorteTipo==="laser"?"selected":""}>Corte Láser</option>
+          <option value="cnc" ${vCorteTipo==="cnc"?"selected":""}>Corte CNC</option>
+        </select>
+      </div>
+      ${vCorteTipo==="laser"?`
+      <div><label>Minutos de corte</label>
+      <input type="number" inputmode="decimal" value="${vCorteMinutos}" oninput="vCorteMinutos=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0'" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+      </div>`:""}
+      ${vCorteTipo==="cnc"?`
+      <div class="grid2" style="gap:12px">
+        <div><label>Distancia (cm lineales)</label>
+        <input type="number" inputmode="decimal" value="${vCorteDistancia}" oninput="vCorteDistancia=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0'" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none"></div>
+        <div><label>Velocidad</label>
+        <select onchange="vCorteSpeed=this.value" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+          <option value="15" ${vCorteSpeed==="15"?"selected":""}>15 mm/seg (MDF/Triplex/PVC)</option>
+          <option value="30" ${vCorteSpeed==="30"?"selected":""}>30 mm/seg (Papel/Cartón/PS)</option>
+        </select></div>
+        <div><label>Pasadas</label>
+        <select onchange="vCortePasadas=this.value" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+          <option value="1" ${vCortePasadas==="1"?"selected":""}>1 pasada (hasta 6mm)</option>
+          <option value="2" ${vCortePasadas==="2"?"selected":""}>2 pasadas (9-12mm)</option>
+          <option value="3" ${vCortePasadas==="3"?"selected":""}>3 pasadas (15mm)</option>
+          <option value="4" ${vCortePasadas==="4"?"selected":""}>4 pasadas (18mm)</option>
+          <option value="5" ${vCortePasadas==="5"?"selected":""}>5 pasadas (25mm)</option>
+        </select></div>
+      </div>`:""}
+    </div>
+    <div style="margin-top:4px;margin-bottom:16px;background:#f8f8f8;border-radius:8px;padding:14px">
       <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Mano de obra ($35.000/hora)</p>
       <div class="grid2" style="gap:12px">
         <div><label>Horas</label><input type="number" inputmode="decimal" id="inp_moHoras" value="${vMOHoras}" oninput="vMOHoras=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
@@ -2062,7 +2113,8 @@ function addVinilo(){
   const cintas=[];
   if(parseFloat(vCintaDelgada)>0) cintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:toMetros(vCintaDelgada,vCintaDelgadaUnit),base:1729.7297});
   if(parseFloat(vCintaAcolchada)>0) cintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:toMetros(vCintaAcolchada,vCintaAcolchadaUnit),base:2594.5946});
-  const item={id:uid(),tipo:"vinilo",ref:vRef,subs:selItems.map(i=>({id:i.id,n:i.n,p:i.p,dosCaras:dosCarasSet.has(i.id)})),ancho:parseFloat(vAncho),alto:parseFloat(vAlto),unid:parseFloat(vUnid)||1,cant:parseInt(vCant)||1,refilados,cintas,manoObra};
+  const vCorte=vCorteTipo==='none'?null:{tipo:vCorteTipo,distancia:parseFloat(vCorteDistancia)||0,speed:vCorteSpeed,pasadas:parseInt(vCortePasadas)||1,minutos:parseFloat(vCorteMinutos)||0};
+  const item={id:uid(),tipo:"vinilo",ref:vRef,subs:selItems.map(i=>({id:i.id,n:i.n,p:i.p,dosCaras:dosCarasSet.has(i.id)})),ancho:parseFloat(vAncho),alto:parseFloat(vAlto),unid:parseFloat(vUnid)||1,cant:parseInt(vCant)||1,refilados,cintas,corte:vCorte,manoObra};
   cur.items=[...cur.items,item];
   resetVinilo();render();
 }
@@ -2180,7 +2232,8 @@ function addLaser(){
   const lCintas=[];
   if(parseFloat(lCintaDelgada)>0) lCintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:toMetros(lCintaDelgada,lCintaDelgadaUnit),base:1729.7297});
   if(parseFloat(lCintaAcolchada)>0) lCintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:toMetros(lCintaAcolchada,lCintaAcolchadaUnit),base:2594.5946});
-  cur.items=[...cur.items,{id:uid(),tipo:"laser",ref:lRef,nombre,mod:lMod,tam:lTam,fam:fam.f,gr:gr?.gr,pPap:pP,pImp:pI,acabados:acabadosSel,refilados:lRefilados,cintas:lCintas,manoObra:lManoObra,cant:parseInt(lCant)||1}];
+  const lCorte=lCorteTipo==='none'?null:{tipo:lCorteTipo,distancia:parseFloat(lCorteDistancia)||0,speed:lCorteSpeed,pasadas:parseInt(lCortePasadas)||1,minutos:parseFloat(lCorteMinutos)||0};
+  cur.items=[...cur.items,{id:uid(),tipo:"laser",ref:lRef,nombre,mod:lMod,tam:lTam,fam:fam.f,gr:gr?.gr,pPap:pP,pImp:pI,acabados:acabadosSel,refilados:lRefilados,cintas:lCintas,corte:lCorte,manoObra:lManoObra,cant:parseInt(lCant)||1}];
   resetLaser();render();
 }
 function togAcabado(id){
