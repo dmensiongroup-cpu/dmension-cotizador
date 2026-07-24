@@ -630,6 +630,7 @@ const ADMIN_PIN="1234";
 let adminTab="procesos";
 let adminEditId=null;
 let lMod="tiro_color", lTam="carta", lFi=0, lGi=0, lCant="1", lRef="", lRefSencillo="0", lMOHoras="0", lMOMinutos="0", lCintaDelgada="0", lCintaAcolchada="0", lCintaDelgadaUnit="cm", lCintaAcolchadaUnit="cm";
+let lGrafado="0";
 let lCorteTipo="none", lCorteDistancia="0", lCorteSpeed="15", lCortePasadas="1", lCorteMinutos="0";
 let cRef="", cTipo="cnc", cDistancia="", cSpeed="15", cPasadas="1", cMinutosLaser="", cNombre="";
 let eRef="", eCartonId="cs", eLargo="", eAncho="", eAlto="", eCant="1", eVinipel=false, eMOHoras="0", eMOMinutos="0";
@@ -1626,7 +1627,8 @@ function calcI(item,d){
   if(item.tipo==="laser"){
     const base=(LBASE[item.mod]?.[item.tam]||0)+(item.pPap||0);
     const acabadosTotal=(item.acabados||[]).reduce((s,a)=>s+(a.p||0),0);
-    return Math.ceil(((base+acabadosTotal)*(item.cant||1)*d+calcRefilados(item,d)+calcCintas(item,d)+calcManoObra(item,d)+calcCorteItem(item,d))/100)*100;
+    const grafadoCost=item.grafado?(item.grafado.pasadas*item.grafado.base*d):0;
+    return Math.ceil(((base+acabadosTotal)*(item.cant||1)*d+calcRefilados(item,d)+grafadoCost+calcCintas(item,d)+calcManoObra(item,d)+calcCorteItem(item,d))/100)*100;
   }
   return 0;
 }
@@ -1764,7 +1766,7 @@ async function guardarCot(){
   render();
 }
 function resetVinilo(){selP=[];selM=[];dosCarasSet=new Set();bP='';bM='';vAncho='';vAlto='';vUnid='1';vCant='1';vRef='';vRefSencillo='0';vRefPS='0';vRefCarton='0';vMOHoras='0';vMOMinutos='0';vCintaDelgada='0';vCintaAcolchada='0';vCintaDelgadaUnit='cm';vCintaAcolchadaUnit='cm';vCorteTipo='none';vCorteDistancia='0';vCorteSpeed='15';vCortePasadas='1';vCorteMinutos='0';sCatP='Todos';sCatM='Todos';}
-function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos='0';lCintaDelgada='0';lCintaAcolchada='0';lCintaDelgadaUnit='cm';lCintaAcolchadaUnit='cm';lCorteTipo='none';lCorteDistancia='0';lCorteSpeed='15';lCortePasadas='1';lCorteMinutos='0';selAcabados=[];}
+function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos='0';lGrafado='0';lCintaDelgada='0';lCintaAcolchada='0';lCintaDelgadaUnit='cm';lCintaAcolchadaUnit='cm';lCorteTipo='none';lCorteDistancia='0';lCorteSpeed='15';lCortePasadas='1';lCorteMinutos='0';selAcabados=[];}
 
 function renderEditor(){
   const d=DESC[cur.tc]||1;
@@ -2176,6 +2178,10 @@ function renderLaser(d){
       <input type="number" inputmode="decimal" value="${lRefSencillo}" oninput="lRefSencillo=this.value" onfocus="if(this.value=='0')this.value='';this.style.borderColor='#F5A800'" onblur="if(this.value=='')this.value='0';this.style.borderColor='#E8E8E8';updateLaserPreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
     </div>
     <div style="margin-bottom:12px;background:#f8f8f8;border-radius:8px;padding:12px 14px">
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Grafado ($300/pasada tipo medio) — cortes totales</p>
+      <input type="number" inputmode="decimal" value="${lGrafado}" oninput="lGrafado=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updateLaserPreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+    </div>
+    <div style="margin-bottom:12px;background:#f8f8f8;border-radius:8px;padding:12px 14px">
       <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Cinta doble faz (metros lineales)</p>
       <div class="grid2" style="gap:12px">
         <div><label>Delgada 12mm ($1.600/m tipo medio)</label>
@@ -2227,13 +2233,14 @@ function addLaser(){
   const nombre=`${LMOD.find(m=>m.id===lMod)?.n} · ${lTam} · ${fam.f}${gr?.gr?' '+gr.gr+'gr':''}`;
   const lRefilados=[];
   if(parseFloat(lRefSencillo)>0) lRefilados.push({tipo:'sencillo',n:'Refilado sencillo',cortes:parseFloat(lRefSencillo),costo:172.97});
+  const lGrafadoVal=parseFloat(lGrafado)||0;
   const lMOTotalHoras=(parseFloat(lMOHoras)||0)+(parseFloat(lMOMinutos)||0)/60;
   const lManoObra=lMOTotalHoras>0?{horas:parseFloat(lMOHoras)||0,minutos:parseFloat(lMOMinutos)||0,total:lMOTotalHoras*35000}:null;
   const lCintas=[];
   if(parseFloat(lCintaDelgada)>0) lCintas.push({tipo:'delgada',n:'Cinta doble faz delgada 12mm',metros:toMetros(lCintaDelgada,lCintaDelgadaUnit),base:1729.7297});
   if(parseFloat(lCintaAcolchada)>0) lCintas.push({tipo:'acolchada',n:'Cinta doble faz acolchada 19mm',metros:toMetros(lCintaAcolchada,lCintaAcolchadaUnit),base:2594.5946});
   const lCorte=lCorteTipo==='none'?null:{tipo:lCorteTipo,distancia:parseFloat(lCorteDistancia)||0,speed:lCorteSpeed,pasadas:parseInt(lCortePasadas)||1,minutos:parseFloat(lCorteMinutos)||0};
-  cur.items=[...cur.items,{id:uid(),tipo:"laser",ref:lRef,nombre,mod:lMod,tam:lTam,fam:fam.f,gr:gr?.gr,pPap:pP,pImp:pI,acabados:acabadosSel,refilados:lRefilados,cintas:lCintas,corte:lCorte,manoObra:lManoObra,cant:parseInt(lCant)||1}];
+  cur.items=[...cur.items,{id:uid(),tipo:"laser",ref:lRef,nombre,mod:lMod,tam:lTam,fam:fam.f,gr:gr?.gr,pPap:pP,pImp:pI,acabados:acabadosSel,refilados:lRefilados,grafado:lGrafadoVal>0?{pasadas:lGrafadoVal,base:324.3243}:null,cintas:lCintas,corte:lCorte,manoObra:lManoObra,cant:parseInt(lCant)||1}];
   resetLaser();render();
 }
 function togAcabado(id){
