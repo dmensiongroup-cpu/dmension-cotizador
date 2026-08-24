@@ -633,7 +633,7 @@ let lMod="tiro_color", lTam="carta", lFi=0, lGi=0, lCant="1", lRef="", lRefSenci
 let lGrafado="0";
 let lCorteTipo="none", lCorteDistancia="0", lCorteSpeed="15", lCortePasadas="1", lCorteMinutos="0";
 let cRef="", cTipo="cnc", cDistancia="", cSpeed="15", cPasadas="1", cMinutosLaser="", cNombre="";
-let eRef="", eCartonId="cs", eLargo="", eAncho="", eAlto="", eCant="1", eVinipel=false, eMOHoras="0", eMOMinutos="0";
+let eRef="", eCartonId="cs", eLargo="", eAncho="", eAlto="", eCant="1", eVinipel=false, eMOHoras="0", eMOMinutos="0", eTubo="0";
 let eMaterialNombre="", eMaterialPrecio="", eMaterialCant="1";
 
 function comprimirImagen(file, callback){
@@ -1321,6 +1321,7 @@ function renderEmpaque(){
     const costoC=fraccion*carton.precio*(parseInt(eCant)||1)*D;
     const vinipelPrecioM2V=VINIPEL.precio/(VINIPEL.lamW*VINIPEL.lamH);
   const costoV=eVinipel?Math.ceil(devW*devH*3*vinipelPrecioM2V*100)/100*(parseInt(eCant)||1)*D:0;
+  const costoT=(parseFloat(eTubo)||0)*2341.9204*D;
     const moH=(parseFloat(eMOHoras)||0)+(parseFloat(eMOMinutos)||0)/60;
     const costoMO=moH*35000*D;
     const total=costoC+costoV+costoMO;
@@ -1359,6 +1360,13 @@ function renderEmpaque(){
     +'<input type="text" value="'+eRef+'" oninput="eRef=this.value" placeholder="Ej: Caja producto X" style="'+inpStyle+'"></div>'
     +'<div style="margin-bottom:12px"><label>Tipo de cartón</label>'
     +'<select oninput="eCartonId=this.value;updateEmpaquePreview()" style="'+inpStyle+'">'+cartonOpts+'</select></div>'
+    +'<div><label>Tubo de cartón</label>'
+    +'<select oninput="eTubo=this.value;updateEmpaquePreview()" style="'+inpStyle+'">'
+    +'<option value="0" '+(eTubo==="0"?'selected':'')+'>Sin tubo</option>'
+    +'<option value="1" '+(eTubo==="1"?'selected':'')+'>1 tubo completo</option>'
+    +'<option value="0.5" '+(eTubo==="0.5"?'selected':'')+'>½ tubo</option>'
+    +'<option value="0.333" '+(eTubo==="0.333"?'selected':'')+'>⅓ de tubo</option>'
+    +'</select></div>'
     +'<div class="grid2" style="gap:12px;margin-bottom:12px">'
     +'<div><label>Largo (cm)</label><input type="number" inputmode="decimal" value="'+eLargo+'" oninput="eLargo=this.value" onblur="updateEmpaquePreview()" placeholder="0" min="0" style="'+inpStyle+'"></div>'
     +'<div><label>Ancho (cm)</label><input type="number" inputmode="decimal" value="'+eAncho+'" oninput="eAncho=this.value" onblur="updateEmpaquePreview()" placeholder="0" min="0" style="'+inpStyle+'"></div>'
@@ -1404,6 +1412,7 @@ function updateEmpaquePreview(){
   const costoC=fraccion*carton.precio*(parseInt(eCant)||1)*D;
   const vinipelPrecioM2V=VINIPEL.precio/(VINIPEL.lamW*VINIPEL.lamH);
   const costoV=eVinipel?Math.ceil(devW*devH*3*vinipelPrecioM2V*100)/100*(parseInt(eCant)||1)*D:0;
+  const costoT=(parseFloat(eTubo)||0)*2341.9204*D;
   const moH=(parseFloat(eMOHoras)||0)+(parseFloat(eMOMinutos)||0)/60;
   const costoMO=moH*35000*D;
   const total=costoC+costoV+costoMO;
@@ -1610,8 +1619,8 @@ function calcEmpaque(item){
   const costoVinipel=item.vinipel?Math.ceil(devW*devH*3*vinipelPrecioM2*100)/100*(parseInt(item.cant)||1)*d:0;
   const moH=(parseFloat(item.manoObra?.horas)||0)+(parseFloat(item.manoObra?.minutos)||0)/60;
   const costoMO=moH*35000*d;
-  const totalEmp=costoCarton+costoVinipel+costoMO;
-  return {costoCarton,costoVinipel,costoMO,fraccion,total:Math.ceil(totalEmp/100)*100};
+  const totalEmp=costoCarton+costoVinipel+costoTubo+costoMO;
+  return {costoCarton,costoVinipel,costoTubo,costoMO,fraccion,total:Math.ceil(totalEmp/100)*100};
 }
 
 function calcI(item,d){
