@@ -1460,13 +1460,13 @@ function updateEmpaquePreview(){
 }
 
 function addEmpaque(){
-  // Sync from DOM in case variables weren't updated
-  const inpLargo=document.querySelector('input[placeholder="0"][onblur*="updateEmpaquePreview"]');
-  const inputs=document.querySelectorAll('#empaque-form input[type="number"]');
-  // Read directly from DOM inputs if globals are empty
-  if(!eLargo){const el=document.getElementById('inp_eLargo');if(el)eLargo=el.value;}
-  if(!eAncho){const el=document.getElementById('inp_eAncho');if(el)eAncho=el.value;}
-  if(!eAlto){const el=document.getElementById('inp_eAlto');if(el)eAlto=el.value;}
+  // Read from DOM inputs directly
+  const domLargo=document.getElementById('inp_eLargo');
+  const domAncho=document.getElementById('inp_eAncho');
+  const domAlto=document.getElementById('inp_eAlto');
+  if(domLargo) eLargo=domLargo.value;
+  if(domAncho) eAncho=domAncho.value;
+  if(domAlto) eAlto=domAlto.value;
   if(!eLargo||!eAncho||!eAlto){alert('Ingresa las dimensiones de la caja');return;}
   const moH=(parseFloat(eMOHoras)||0)+(parseFloat(eMOMinutos)||0)/60;
   const manoObra=moH>0?{horas:parseFloat(eMOHoras)||0,minutos:parseFloat(eMOMinutos)||0,total:moH*35000}:null;
