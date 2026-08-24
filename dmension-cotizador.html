@@ -608,6 +608,7 @@ const CARTONES=[
 // Precio por cm2 = 40000 / (50*40000) = 0.02 $/cm2
 // Para el desarrollo de cada caja se usa: perimetro*(ancho+alto) cm2 de vinipel aprox
 const VINIPEL={lamW:50,lamH:40000,precio:40000};
+const TUBO_CARTON={costo:2000};
 const TLBL={tipo3:"Tipo 3 — Esporádico",tipo2:"Tipo 2 — Medio",tipo1:"Tipo 1 — Frecuente",empleado:"Empleado"};
 
 // ── STATE ────────────────────────────────────────────────────────
@@ -1418,8 +1419,8 @@ function renderEmpaque(){
     +'<div style="background:#f8f8f8;border-radius:8px;padding:14px;margin-bottom:12px">'
     +'<p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Mano de obra ($35.000/hora)</p>'
     +'<div class="grid2" style="gap:12px">'
-    +'<div><label>Horas</label><input type="number" inputmode="decimal" value="'+eMOHoras+'" oninput="eMOHoras=this.value" onblur="updateEmpaquePreview()" placeholder="0" min="0" style="'+inpStyle+'"></div>'
-    +'<div><label>Minutos</label><input type="number" inputmode="decimal" value="'+eMOMinutos+'" oninput="eMOMinutos=this.value" onblur="updateEmpaquePreview()" placeholder="0" min="0" style="'+inpStyle+'"></div>'
+    +'<div><label>Horas</label><input type="number" inputmode="decimal" value="'+eMOHoras+'" oninput="eMOHoras=this.value" onfocus="clearIfZero(this)" onblur="restoreZero(this,updateEmpaquePreview)" placeholder="0" min="0" style="'+inpStyle+'"></div>'
+    +'<div><label>Minutos</label><input type="number" inputmode="decimal" value="'+eMOMinutos+'" oninput="eMOMinutos=this.value" onfocus="clearIfZero(this)" onblur="restoreZero(this,updateEmpaquePreview)" placeholder="0" min="0" style="'+inpStyle+'"></div>'
     +'</div></div>'
     +'<div id="empaquePreview">'+previewHtml+'</div>'
     +'<button class="btn" style="margin-top:4px" onclick="addEmpaque()">+ Agregar ítem</button>'
@@ -1460,13 +1461,6 @@ function updateEmpaquePreview(){
 }
 
 function addEmpaque(){
-  // Read from DOM inputs directly
-  const domLargo=document.getElementById('inp_eLargo');
-  const domAncho=document.getElementById('inp_eAncho');
-  const domAlto=document.getElementById('inp_eAlto');
-  if(domLargo) eLargo=domLargo.value;
-  if(domAncho) eAncho=domAncho.value;
-  if(domAlto) eAlto=domAlto.value;
   if(!eLargo||!eAncho||!eAlto){alert('Ingresa las dimensiones de la caja');return;}
   const moH=(parseFloat(eMOHoras)||0)+(parseFloat(eMOMinutos)||0)/60;
   const manoObra=moH>0?{horas:parseFloat(eMOHoras)||0,minutos:parseFloat(eMOMinutos)||0,total:moH*35000}:null;
@@ -1477,9 +1471,9 @@ function addEmpaque(){
   cur.items=[...cur.items,{
     id:uid(),tipo:'empaque',ref:eRef,cartonId:eCartonId,
     largo:parseFloat(eLargo),ancho:parseFloat(eAncho),alto:parseFloat(eAlto),
-    cant:parseInt(eCant)||1,vinipel:eVinipel,fraccion,manoObra
+    cant:parseInt(eCant)||1,vinipel:eVinipel,tubo:parseFloat(eTubo)||0,fraccion,manoObra
   }];
-  eRef='';eLargo='';eAncho='';eAlto='';eCant='1';eVinipel=false;eMOHoras='0';eMOMinutos='0';
+  eRef='';eLargo='';eAncho='';eAlto='';eCant='1';eVinipel=false;eTubo='0';eMOHoras='0';eMOMinutos='0';
   render();
 }
 
@@ -1629,6 +1623,8 @@ function calcRefilados(item,d){
   return (item.refilados||[]).reduce((s,r)=>s+r.cortes*r.costo*d,0);
 }
 function toMetros(val, unit){ return unit==='m' ? parseFloat(val)||0 : (parseFloat(val)||0)/100; }
+function clearIfZero(el){if(el.value=='0')el.value='';}
+function restoreZero(el,cb){if(el.value===''){el.value='0';}if(cb)cb();}
 function calcCintas(item,d){
   return (item.cintas||[]).reduce((s,c)=>s+c.metros*c.base*d,0);
 }
@@ -1668,6 +1664,8 @@ function calcEmpaque(item){
   const vinipelPrecioM2=VINIPEL.precio/(VINIPEL.lamW*VINIPEL.lamH);
   const costoVinipel=item.vinipel?Math.ceil(devW*devH*3*vinipelPrecioM2*100)/100*(parseInt(item.cant)||1)*d:0;
   const moH=(parseFloat(item.manoObra?.horas)||0)+(parseFloat(item.manoObra?.minutos)||0)/60;
+  const tuboBase=TUBO_CARTON&&TUBO_CARTON.costo?TUBO_CARTON.costo/0.854:0;
+  const costoTubo=(parseFloat(item.tubo)||0)*tuboBase*d;
   const costoMO=moH*35000*d;
   const totalEmp=costoCarton+costoVinipel+costoTubo+costoMO;
   return {costoCarton,costoVinipel,costoTubo,costoMO,fraccion,total:Math.ceil(totalEmp/100)*100};
@@ -1973,9 +1971,9 @@ function renderVinilo(d){
     <div style="margin-top:4px;margin-bottom:16px;background:#f8f8f8;border-radius:8px;padding:14px">
       <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Refilados (número de cortes)</p>
       <div class="grid2" style="gap:12px">
-        <div><label>Refilado sencillo ($160/corte tipo medio) — cortes totales</label><input type="number" inputmode="decimal" id="inp_refSencillo" value="${vRefSencillo}" oninput="vRefSencillo=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
-        <div><label>Refilado poliestireno ($330/corte tipo medio) — cortes totales</label><input type="number" inputmode="decimal" id="inp_refPS" value="${vRefPS}" oninput="vRefPS=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
-        <div><label>Refilado cartón industrial ($660/corte tipo medio) — cortes totales</label><input type="number" inputmode="decimal" id="inp_refCarton" value="${vRefCarton}" oninput="vRefCarton=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
+        <div><label>Refilado sencillo ($160/corte tipo medio) — cortes totales</label><input type="number" inputmode="decimal" id="inp_refSencillo" value="${vRefSencillo}" oninput="vRefSencillo=this.value" onfocus="clearIfZero(this)" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
+        <div><label>Refilado poliestireno ($330/corte tipo medio) — cortes totales</label><input type="number" inputmode="decimal" id="inp_refPS" value="${vRefPS}" oninput="vRefPS=this.value" onfocus="clearIfZero(this)" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
+        <div><label>Refilado cartón industrial ($660/corte tipo medio) — cortes totales</label><input type="number" inputmode="decimal" id="inp_refCarton" value="${vRefCarton}" oninput="vRefCarton=this.value" onfocus="clearIfZero(this)" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
       </div>
     </div>
     <div style="margin-top:4px;margin-bottom:16px;background:#f8f8f8;border-radius:8px;padding:14px">
@@ -1983,13 +1981,13 @@ function renderVinilo(d){
       <div class="grid2" style="gap:12px">
         <div><label>Delgada 12mm ($1.600/m tipo medio)</label>
           <div style="display:flex;gap:6px">
-            <input type="number" inputmode="decimal" id="inp_cintaDelgada" value="${vCintaDelgada}" oninput="vCintaDelgada=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updatePreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+            <input type="number" inputmode="decimal" id="inp_cintaDelgada" value="${vCintaDelgada}" oninput="vCintaDelgada=this.value" onfocus="clearIfZero(this)" onblur="if(this.value==='')this.value='0';updatePreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
             <select onchange="vCintaDelgadaUnit=this.value;updatePreview()" style="width:64px;flex-shrink:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 6px;font-size:13px;font-family:inherit;outline:none"><option value="cm" ${vCintaDelgadaUnit==="cm"?"selected":""}>cm</option><option value="m" ${vCintaDelgadaUnit==="m"?"selected":""}>m</option></select>
           </div>
         </div>
         <div><label>Acolchada 19mm ($2.400/m tipo medio)</label>
           <div style="display:flex;gap:6px">
-            <input type="number" inputmode="decimal" id="inp_cintaAcolchada" value="${vCintaAcolchada}" oninput="vCintaAcolchada=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updatePreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+            <input type="number" inputmode="decimal" id="inp_cintaAcolchada" value="${vCintaAcolchada}" oninput="vCintaAcolchada=this.value" onfocus="clearIfZero(this)" onblur="if(this.value==='')this.value='0';updatePreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
             <select onchange="vCintaAcolchadaUnit=this.value;updatePreview()" style="width:64px;flex-shrink:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 6px;font-size:13px;font-family:inherit;outline:none"><option value="cm" ${vCintaAcolchadaUnit==="cm"?"selected":""}>cm</option><option value="m" ${vCintaAcolchadaUnit==="m"?"selected":""}>m</option></select>
           </div>
         </div>
@@ -2007,12 +2005,12 @@ function renderVinilo(d){
       </div>
       ${vCorteTipo==="laser"?`
       <div><label>Minutos de corte</label>
-      <input type="number" inputmode="decimal" value="${vCorteMinutos}" oninput="vCorteMinutos=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0'" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+      <input type="number" inputmode="decimal" value="${vCorteMinutos}" oninput="vCorteMinutos=this.value" onfocus="clearIfZero(this)" onblur="if(this.value==='')this.value='0'" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
       </div>`:""}
       ${vCorteTipo==="cnc"?`
       <div class="grid2" style="gap:12px">
         <div><label>Distancia (cm lineales)</label>
-        <input type="number" inputmode="decimal" value="${vCorteDistancia}" oninput="vCorteDistancia=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0'" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none"></div>
+        <input type="number" inputmode="decimal" value="${vCorteDistancia}" oninput="vCorteDistancia=this.value" onfocus="clearIfZero(this)" onblur="if(this.value==='')this.value='0'" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none"></div>
         <div><label>Velocidad</label>
         <select onchange="vCorteSpeed=this.value" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
           <option value="15" ${vCorteSpeed==="15"?"selected":""}>15 mm/seg (MDF/Triplex/PVC)</option>
@@ -2031,8 +2029,8 @@ function renderVinilo(d){
     <div style="margin-top:4px;margin-bottom:16px;background:#f8f8f8;border-radius:8px;padding:14px">
       <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Mano de obra ($35.000/hora)</p>
       <div class="grid2" style="gap:12px">
-        <div><label>Horas</label><input type="number" inputmode="decimal" id="inp_moHoras" value="${vMOHoras}" oninput="vMOHoras=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
-        <div><label>Minutos</label><input type="number" inputmode="decimal" id="inp_moMinutos" value="${vMOMinutos}" oninput="vMOMinutos=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
+        <div><label>Horas</label><input type="number" inputmode="decimal" id="inp_moHoras" value="${vMOHoras}" oninput="vMOHoras=this.value" onfocus="clearIfZero(this)" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
+        <div><label>Minutos</label><input type="number" inputmode="decimal" id="inp_moMinutos" value="${vMOMinutos}" oninput="vMOMinutos=this.value" onfocus="clearIfZero(this)" onblur="if(this.value=='')this.value='0';updatePreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" onfocus="this.style.borderColor='#F5A800'" onblur="this.style.borderColor='#E8E8E8'"></div>
       </div>
     </div>
     <div id="previewBox">${prevBox}</div>
@@ -2238,20 +2236,20 @@ function renderLaser(d){
     </div>
     <div style="margin-bottom:12px;background:#f8f8f8;border-radius:8px;padding:12px 14px">
       <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Grafado ($300/pasada tipo medio) — cortes totales</p>
-      <input type="number" inputmode="decimal" value="${lGrafado}" oninput="lGrafado=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updateLaserPreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+      <input type="number" inputmode="decimal" value="${lGrafado}" oninput="lGrafado=this.value" onfocus="clearIfZero(this)" onblur="if(this.value==='')this.value='0';updateLaserPreview()" placeholder="0" min="0" style="width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
     </div>
     <div style="margin-bottom:12px;background:#f8f8f8;border-radius:8px;padding:12px 14px">
       <p style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A">Cinta doble faz (metros lineales)</p>
       <div class="grid2" style="gap:12px">
         <div><label>Delgada 12mm ($1.600/m tipo medio)</label>
           <div style="display:flex;gap:6px">
-            <input type="number" inputmode="decimal" value="${lCintaDelgada}" oninput="lCintaDelgada=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updateLaserPreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+            <input type="number" inputmode="decimal" value="${lCintaDelgada}" oninput="lCintaDelgada=this.value" onfocus="clearIfZero(this)" onblur="if(this.value==='')this.value='0';updateLaserPreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
             <select onchange="lCintaDelgadaUnit=this.value;updateLaserPreview()" style="width:64px;flex-shrink:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 6px;font-size:13px;font-family:inherit;outline:none"><option value="cm" ${lCintaDelgadaUnit==="cm"?"selected":""}>cm</option><option value="m" ${lCintaDelgadaUnit==="m"?"selected":""}>m</option></select>
           </div>
         </div>
         <div><label>Acolchada 19mm ($2.400/m tipo medio)</label>
           <div style="display:flex;gap:6px">
-            <input type="number" inputmode="decimal" value="${lCintaAcolchada}" oninput="lCintaAcolchada=this.value" onfocus="if(this.value==='0')this.value=''" onblur="if(this.value==='')this.value='0';updateLaserPreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
+            <input type="number" inputmode="decimal" value="${lCintaAcolchada}" oninput="lCintaAcolchada=this.value" onfocus="clearIfZero(this)" onblur="if(this.value==='')this.value='0';updateLaserPreview()" placeholder="0" min="0" style="flex:1;min-width:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">
             <select onchange="lCintaAcolchadaUnit=this.value;updateLaserPreview()" style="width:64px;flex-shrink:0;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 6px;font-size:13px;font-family:inherit;outline:none"><option value="cm" ${lCintaAcolchadaUnit==="cm"?"selected":""}>cm</option><option value="m" ${lCintaAcolchadaUnit==="m"?"selected":""}>m</option></select>
           </div>
         </div>
