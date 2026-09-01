@@ -608,6 +608,55 @@ const CARTONES=[
 // Precio por cm2 = 40000 / (50*40000) = 0.02 $/cm2
 // Para el desarrollo de cada caja se usa: perimetro*(ancho+alto) cm2 de vinipel aprox
 const VINIPEL={lamW:50,lamH:40000,precio:40000};
+
+// ── CARPINTERÍA ─────────────────────────────────────────────────────────────
+const MDF_CALIBRES=[
+  {id:'mdf_2_5',n:'MDF 2.5mm',cal:2.5,p:0},
+  {id:'mdf_3',n:'MDF 3mm',cal:3,p:0},
+  {id:'mdf_4',n:'MDF 4mm',cal:4,p:0},
+  {id:'mdf_5_5',n:'MDF 5.5mm',cal:5.5,p:0},
+  {id:'mdf_9',n:'MDF 9mm',cal:9,p:0},
+  {id:'mdf_12',n:'MDF 12mm',cal:12,p:0},
+  {id:'mdf_15',n:'MDF 15mm',cal:15,p:0},
+  {id:'mdf_18',n:'MDF 18mm',cal:18,p:0},
+];
+const TRIPLEX_CALIBRES=[
+  {id:'tri_6_5',n:'Triplex 6.5mm',cal:6.5,p:0},
+  {id:'tri_9',n:'Triplex 9mm',cal:9,p:0},
+  {id:'tri_12',n:'Triplex 12mm',cal:12,p:0},
+  {id:'tri_15',n:'Triplex 15mm',cal:15,p:0},
+  {id:'tri_18',n:'Triplex 18mm',cal:18,p:0},
+];
+const FINGER_CALIBRES=[
+  {id:'fp_15',n:'Finger Pino 15mm',especie:'pino',cal:15,p:0},
+  {id:'fp_18',n:'Finger Pino 18mm',especie:'pino',cal:18,p:0},
+  {id:'fr_15',n:'Finger Roble 15mm',especie:'roble',cal:15,p:0},
+  {id:'fr_18',n:'Finger Roble 18mm',especie:'roble',cal:18,p:0},
+];
+const LISTONES_PINO=[
+  {id:'lp1',n:'Pino 4.1×1.9cm',ancho:4.1,alto:1.9,p:0},
+  {id:'lp2',n:'Pino 4.1×4.1cm',ancho:4.1,alto:4.1,p:0},
+  {id:'lp3',n:'Pino 4.1×9cm',ancho:4.1,alto:9,p:0},
+  {id:'lp4',n:'Pino 1.9×13.8cm',ancho:1.9,alto:13.8,p:0},
+  {id:'lp5',n:'Pino 1.9×9cm',ancho:1.9,alto:9,p:0},
+  {id:'lp6',n:'Pino 4.1×6.5cm',ancho:4.1,alto:6.5,p:0},
+  {id:'lp7',n:'Pino 1.9×23cm',ancho:1.9,alto:23,p:0},
+  {id:'lp8',n:'Pino 4.1×13.8cm',ancho:4.1,alto:13.8,p:0},
+  {id:'lp9',n:'Pino 2.5×3cm',ancho:2.5,alto:3,p:0},
+];
+const LISTONES_CHINGALE=[
+  {id:'lc1',n:'Chingalé 4×2cm',ancho:4,alto:2,p:0},
+  {id:'lc2',n:'Chingalé 4×4cm',ancho:4,alto:4,p:0},
+];
+// Bolillos y maderas a medida libre
+const MADERAS_CUSTOM=[
+  {id:'roble_custom',n:'Roble (medida libre)',p:0},
+  {id:'bolillo_pino_custom',n:'Bolillo pino (medida libre)',p:0},
+  {id:'bolillo_chingale_custom',n:'Bolillo chingalé (medida libre)',p:0},
+];
+// Transporte
+const TRANSPORTE_MOTO={precio:16800}; // precio de venta fijo
+
 const TUBO_CARTON={costo:2000};
 const TLBL={tipo3:"Tipo 3 — Esporádico",tipo2:"Tipo 2 — Medio",tipo1:"Tipo 1 — Frecuente",empleado:"Empleado"};
 
@@ -617,7 +666,9 @@ let vTab="info", sCatP="Todos", sCatM="Todos", bP="", bM="", selP=[], selM=[];
 let vAncho="", vAlto="", vUnid="1", vCant="1", vRef="";
 let vRefSencillo="0", vRefPS="0", vRefCarton="0";
 let vMOHoras="0", vMOMinutos="0";
-let dosCarasSet=new Set(); // ids of selected items marked as 2 caras
+let dosCarasSet=new Set();
+// Carpintería state
+let cpRef="",cpNombre="",cpTableros=[],cpListones=[],cpPintura=null,cpHerrajes=[],cpMatEsp=[],cpTransporte=null,cpMOHoras="0",cpMOMinutos="0"; // ids of selected items marked as 2 caras
 let vCintaDelgada="0", vCintaAcolchada="0", vCintaDelgadaUnit="cm", vCintaAcolchadaUnit="cm";
 let vCorteTipo="none", vCorteDistancia="0", vCorteSpeed="15", vCortePasadas="1", vCorteMinutos="0";
 let oRef="", oNombre="", oPrecio="", oCant="1", oMOHoras="0", oMOMinutos="0", oAncho="", oAlto="";
@@ -1343,6 +1394,215 @@ function addCorte(tc){
 }
 
 // ── EMPAQUE ──────────────────────────────────────────────────────
+function renderCarpinteria(d){
+  const inpStyle='width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none';
+  const lblStyle='font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px';
+  const items=(cur.items||[]).filter(i=>i.tipo==="carpinteria");
+
+  // Item list
+  const ivsHtml=items.length?'<div style="margin-bottom:16px">'+items.map(function(item){
+    const val=calcCarpinteria(item,d);
+    return '<div class="item-row" style="display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:1px solid #F0F0F0">'
+      +'<div style="flex:1">'
+      +(item.ref?'<p style="margin:0 0 2px;font-size:12px;font-weight:800;color:#D4900A">'+item.ref+'</p>':'')
+      +'<p style="margin:0;font-size:13px;font-weight:600">'+(item.nombre||'Ítem carpintería')+'</p>'
+      +(item.tableros&&item.tableros.length?'<div style="margin-top:3px">'+item.tableros.map(t=>'<span class="tag" style="background:#e8f4e8">'+t.n+': '+t.ancho+'×'+t.alto+'cm ×'+t.cant+'</span>').join('')+'</div>':'')
+      +(item.listones&&item.listones.length?'<div style="margin-top:3px">'+item.listones.map(l=>'<span class="tag" style="background:#f4f0e8">'+l.n+': '+l.metros+'m ×'+l.cant+'</span>').join('')+'</div>':'')
+      +(item.herrajes&&item.herrajes.length?'<div style="margin-top:3px">'+item.herrajes.map(h=>'<span class="tag" style="background:#f0e8f4">'+h.n+': '+h.cant+'und</span>').join('')+'</div>':'')
+      +(item.transporte?'<span class="tag" style="background:#e8f0f4;margin-top:3px">Transporte: '+item.transporte.tipo+'</span>':'')
+      +(item.manoObra?'<span class="tag" style="background:#e8eef8;margin-top:3px">M.O.: '+item.manoObra.horas+'h '+item.manoObra.minutos+'min</span>':'')
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:4px">'
+      +'<span style="font-weight:700;font-size:14px">'+fmt(val)+'</span>'
+      +'<button data-action="moveUp" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer">↑</button>'
+      +'<button data-action="moveDown" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer">↓</button>'
+      +'<button data-action="editItem" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer">✏️</button>'
+      +'<button data-action="delItem" data-id="'+item.id+'" class="del">×</button>'
+      +'</div></div>';
+  }).join('')+'</div>':'';
+
+  // Build tablero rows
+  const tableroTypes=[...MDF_CALIBRES,...TRIPLEX_CALIBRES,...FINGER_CALIBRES];
+  const tableroRows=cpTableros.map(function(t,i){
+    const opts=tableroTypes.map(t2=>'<option value="'+t2.id+'"'+(t.id===t2.id?' selected':'')+'>'+t2.n+'</option>').join('');
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">'
+      +'<select onchange="cpTableros['+i+'].id=this.value;cpTableros['+i+'].n=this.options[this.selectedIndex].text;updateCpMaterial('+i+')" style="flex:2;min-width:160px;'+inpStyle+'">'+opts+'</select>'
+      +'<input type="number" inputmode="decimal" value="'+t.ancho+'" oninput="cpTableros['+i+'].ancho=parseFloat(this.value)||0" placeholder="Ancho cm" style="width:90px;'+inpStyle+'">'
+      +'<input type="number" inputmode="decimal" value="'+t.alto+'" oninput="cpTableros['+i+'].alto=parseFloat(this.value)||0" placeholder="Alto cm" style="width:90px;'+inpStyle+'">'
+      +'<input type="number" inputmode="decimal" value="'+t.cant+'" oninput="cpTableros['+i+'].cant=parseInt(this.value)||1" placeholder="Cant" style="width:70px;'+inpStyle+'">'
+      +'<button onclick="cpTableros.splice('+i+',1);render()" class="del">×</button>'
+      +'</div>';
+  }).join('');
+
+  // Build liston rows
+  const listonRows=cpListones.map(function(l,i){
+    const pinoOpts=LISTONES_PINO.map(lp=>'<option value="'+lp.id+'"'+(l.id===lp.id?' selected':'')+'>'+lp.n+'</option>').join('');
+    const chingOpts=LISTONES_CHINGALE.map(lc=>'<option value="'+lc.id+'"'+(l.id===lc.id?' selected':'')+'>'+lc.n+'</option>').join('');
+    const customOpts=MADERAS_CUSTOM.map(mc=>'<option value="'+mc.id+'"'+(l.id===mc.id?' selected':'')+'>'+mc.n+'</option>').join('');
+    const isCustom=['roble_custom','bolillo_pino_custom','bolillo_chingale_custom'].includes(l.id);
+    const customInput=isCustom?'<input type="text" value="'+(l.desc||'')+'" oninput="cpListones['+i+'].desc=this.value" placeholder="Descripción medida" style="width:140px;'+inpStyle+'">':'';
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">'
+      +'<select onchange="updateCpListon('+i+',this.value,this.options[this.selectedIndex].text)" style="flex:2;min-width:160px;'+inpStyle+'">'
+      +'<optgroup label="Pino">'+pinoOpts+'</optgroup>'
+      +'<optgroup label="Chingalé">'+chingOpts+'</optgroup>'
+      +'<optgroup label="Medida libre">'+customOpts+'</optgroup>'
+      +'</select>'
+      +customInput
+      +'<input type="number" inputmode="decimal" value="'+l.metros+'" oninput="cpListones['+i+'].metros=parseFloat(this.value)||0" placeholder="Metros" style="width:80px;'+inpStyle+'">'
+      +'<input type="number" inputmode="decimal" value="'+l.cant+'" oninput="cpListones['+i+'].cant=parseInt(this.value)||1" placeholder="Cant" style="width:70px;'+inpStyle+'">'
+      +'<button onclick="cpListones.splice('+i+',1);render()" class="del">×</button>'
+      +'</div>';
+  }).join('');
+
+  // Build herraje rows
+  const herrajeRows=cpHerrajes.map(function(h,i){
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">'
+      +'<input type="text" value="'+h.n+'" oninput="cpHerrajes['+i+'].n=this.value" placeholder="Nombre herraje" style="flex:2;min-width:140px;'+inpStyle+'">'
+      +'<input type="number" inputmode="decimal" value="'+h.p+'" oninput="cpHerrajes['+i+'].p=parseFloat(this.value)||0" placeholder="Precio und" style="width:110px;'+inpStyle+'">'
+      +'<input type="number" inputmode="decimal" value="'+h.cant+'" oninput="cpHerrajes['+i+'].cant=parseInt(this.value)||1" placeholder="Cant" style="width:70px;'+inpStyle+'">'
+      +'<button onclick="cpHerrajes.splice('+i+',1);render()" class="del">×</button>'
+      +'</div>';
+  }).join('');
+
+  // Build matEsp rows
+  const matEspRows=cpMatEsp.map(function(m,i){
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">'
+      +'<input type="text" value="'+m.n+'" oninput="cpMatEsp['+i+'].n=this.value" placeholder="Nombre material" style="flex:2;min-width:140px;'+inpStyle+'">'
+      +'<input type="number" inputmode="decimal" value="'+m.p+'" oninput="cpMatEsp['+i+'].p=parseFloat(this.value)||0" placeholder="Precio und" style="width:110px;'+inpStyle+'">'
+      +'<input type="number" inputmode="decimal" value="'+m.cant+'" oninput="cpMatEsp['+i+'].cant=parseInt(this.value)||1" placeholder="Cant" style="width:70px;'+inpStyle+'">'
+      +'<button onclick="cpMatEsp.splice('+i+',1);render()" class="del">×</button>'
+      +'</div>';
+  }).join('');
+
+  // Pintura section
+  const pinturaHtml=cpPintura
+    ?'<div class="grid2" style="gap:12px">'
+      +'<div><label style="'+lblStyle+'">Tipo</label>'
+      +'<select onchange="cpPintura.tipo=this.value;cpPintura.n=this.options[this.selectedIndex].text" style="'+inpStyle+'">'
+      +'<option value="agua"'+(cpPintura.tipo==="agua"?" selected":"")+'>A base de agua</option>'
+      +'<option value="laca_nitro"'+(cpPintura.tipo==="laca_nitro"?" selected":"")+'>Laca nitro</option>'
+      +'<option value="laca_cat"'+(cpPintura.tipo==="laca_cat"?" selected":"")+'>Laca catalizada</option>'
+      +'<option value="poliuretano"'+(cpPintura.tipo==="poliuretano"?" selected":"")+'>Poliuretano</option>'
+      +'</select></div>'
+      +'<div><label style="'+lblStyle+'">Área (m²)</label><input type="number" inputmode="decimal" value="'+(cpPintura.area||0)+'" oninput="cpPintura.area=parseFloat(this.value)||0" placeholder="0" style="'+inpStyle+'"></div>'
+      +'<div><label style="'+lblStyle+'">Manos</label><input type="number" inputmode="decimal" value="'+(cpPintura.manos||1)+'" oninput="cpPintura.manos=parseInt(this.value)||1" placeholder="1" style="'+inpStyle+'"></div>'
+      +'<div><label style="'+lblStyle+'">Precio/m²</label><input type="number" inputmode="decimal" value="'+(cpPintura.p||0)+'" oninput="cpPintura.p=parseFloat(this.value)||0" placeholder="0" style="'+inpStyle+'"></div>'
+      +'</div>'
+      +'<button onclick="cpPintura=null;render()" style="background:none;border:1px solid #E8E8E8;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;margin-top:8px;font-family:inherit">Quitar pintura</button>'
+    :'<button onclick="addCpPintura()" style="background:#F5A800;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">+ Agregar pintura</button>';
+
+  // Transporte section
+  const transpHtml=cpTransporte
+    ?'<div class="grid2" style="gap:12px">'
+      +'<div><label style="'+lblStyle+'">Tipo</label>'
+      +'<select onchange="updateCpTransporteTipo(this.value)" style="'+inpStyle+'">'+
+      +'<option value="moto"'+(cpTransporte.tipo==="moto"?" selected":"")+'>Moto ('+fmt(TRANSPORTE_MOTO.precio)+')</option>'
+      +'<option value="taxi"'+(cpTransporte.tipo==="taxi"?" selected":"")+'>Taxi</option>'
+      +'<option value="camion"'+(cpTransporte.tipo==="camion"?" selected":"")+'>Camión</option>'
+      +'</select></div>'
+      +(cpTransporte.tipo!=="moto"?'<div><label style="'+lblStyle+'">Valor ($)</label><input type="number" inputmode="decimal" value="'+(cpTransporte.total||0)+'" oninput="cpTransporte.total=parseFloat(this.value)||0" placeholder="0" style="'+inpStyle+'"></div>':'')
+      +'</div>'
+      +'<button onclick="cpTransporte=null;render()" style="background:none;border:1px solid #E8E8E8;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;margin-top:8px;font-family:inherit">Quitar transporte</button>'
+    :'<button onclick="addCpTransporte()" style="background:#F5A800;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">+ Agregar transporte</button>'
+
+  const btnStyle='background:#F5A800;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit';
+  const secStyle='background:#f8f8f8;border-radius:8px;padding:14px;margin-bottom:12px';
+  const secTitle='margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A';
+
+  return '<div>'
+    +ivsHtml
+    +'<div class="card" style="padding:16px">'
+    +'<h3 style="margin:0 0 14px;font-size:15px;font-weight:800">Nuevo ítem de carpintería</h3>'
+    +'<div class="grid2" style="gap:12px;margin-bottom:14px">'
+    +'<div><label style="'+lblStyle+'">Referencia</label><input id="cp_ref" type="text" value="'+cpRef+'" oninput="cpRef=this.value" placeholder="Ej: Gabinete cocina" style="'+inpStyle+'"></div>'
+    +'<div><label style="'+lblStyle+'">Nombre del producto</label><input type="text" value="'+cpNombre+'" oninput="cpNombre=this.value" placeholder="Descripción del mueble" style="'+inpStyle+'"></div>'
+    +'</div>'
+    // Tableros
+    +'<div style="'+secStyle+'">'
+    +'<p style="'+secTitle+'">Tableros (MDF / Triplex / Finger)</p>'
+    +tableroRows
+    +'<button onclick="cpTableros.push({id:MDF_CALIBRES[0].id,n:MDF_CALIBRES[0].n,p:MDF_CALIBRES[0].p,ancho:0,alto:0,cant:1});render()" style="'+btnStyle+'">+ Agregar tablero</button>'
+    +'</div>'
+    // Listones
+    +'<div style="'+secStyle+'">'
+    +'<p style="'+secTitle+'">Listones (metros lineales)</p>'
+    +listonRows
+    +'<button onclick="cpListones.push({id:LISTONES_PINO[0].id,n:LISTONES_PINO[0].n,p:LISTONES_PINO[0].p,metros:0,cant:1});render()" style="'+btnStyle+'">+ Agregar listón</button>'
+    +'</div>'
+    // Pintura
+    +'<div style="'+secStyle+'">'
+    +'<p style="'+secTitle+'">Pintura</p>'
+    +pinturaHtml
+    +'</div>'
+    // Herrajes
+    +'<div style="'+secStyle+'">'
+    +'<p style="'+secTitle+'">Herrajes</p>'
+    +herrajeRows
+    +'<button onclick="addCpHerraje()" style="'+btnStyle+'">+ Agregar herraje</button>'
+    +'</div>'
+    // Materiales especiales
+    +'<div style="'+secStyle+'">'
+    +'<p style="'+secTitle+'">Materiales especiales</p>'
+    +matEspRows
+    +'<button onclick="addCpMatEsp()" style="'+btnStyle+'">+ Agregar material</button>'
+    +'</div>'
+    // Transporte
+    +'<div style="'+secStyle+'">'
+    +'<p style="'+secTitle+'">Transporte</p>'
+    +transpHtml
+    +'</div>'
+    // Mano de obra
+    +'<div style="'+secStyle+'">'
+    +'<p style="'+secTitle+'">Mano de obra ($35.000/hora)</p>'
+    +'<div class="grid2" style="gap:12px">'
+    +'<div><label style="'+lblStyle+'">Horas</label><input type="number" inputmode="decimal" value="'+cpMOHoras+'" oninput="cpMOHoras=this.value" onfocus="clearIfZero(this)" onblur="restoreZero(this,null)" placeholder="0" min="0" style="'+inpStyle+'"></div>'
+    +'<div><label style="'+lblStyle+'">Minutos</label><input type="number" inputmode="decimal" value="'+cpMOMinutos+'" oninput="cpMOMinutos=this.value" onfocus="clearIfZero(this)" onblur="restoreZero(this,null)" placeholder="0" min="0" style="'+inpStyle+'"></div>'
+    +'</div></div>'
+    +'<button onclick="addCarpinteria()" style="width:100%;background:#F5A800;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">+ Agregar ítem de carpintería</button>'
+    +'</div></div>';
+}
+
+function addCpPintura(){cpPintura={tipo:'agua',n:'A base de agua',area:0,manos:1,p:0};render();}
+function updateCpTransporteTipo(v){cpTransporte.tipo=v;if(v==='moto')cpTransporte.total=TRANSPORTE_MOTO.precio;else cpTransporte.total=0;render();}
+function addCpTransporte(){cpTransporte={tipo:'moto',total:TRANSPORTE_MOTO.precio};render();}
+function addCpHerraje(){cpHerrajes.push({n:'',p:0,cant:1});render();}
+function addCpMatEsp(){cpMatEsp.push({n:'',p:0,cant:1});render();}
+function updateCpMaterial(idx){
+  const all=[...MDF_CALIBRES,...TRIPLEX_CALIBRES,...FINGER_CALIBRES];
+  const mat=all.find(m=>m.id===cpTableros[idx].id);
+  if(mat) cpTableros[idx].p=mat.p;
+}
+
+function updateCpListon(idx,id,name){
+  cpListones[idx].id=id;
+  cpListones[idx].n=name;
+  const customIds=['roble_custom','bolillo_pino_custom','bolillo_chingale_custom'];
+  if(customIds.includes(id)){cpListones[idx].p=0;return;}
+  const all=[...LISTONES_PINO,...LISTONES_CHINGALE];
+  const mat=all.find(m=>m.id===id);
+  if(mat) cpListones[idx].p=mat.p;
+}
+
+function addCarpinteria(){
+  if(!cpNombre&&!cpTableros.length&&!cpListones.length){alert('Agrega al menos un nombre o material');return;}
+  const moH=(parseFloat(cpMOHoras)||0)+(parseFloat(cpMOMinutos)||0)/60;
+  const manoObra=moH>0?{horas:parseFloat(cpMOHoras)||0,minutos:parseFloat(cpMOMinutos)||0,total:moH*35000}:null;
+  const item={
+    id:uid(),tipo:'carpinteria',
+    ref:cpRef,nombre:cpNombre,
+    tableros:cpTableros.map(t=>({...t})),
+    listones:cpListones.map(l=>({...l})),
+    pintura:cpPintura?{...cpPintura}:null,
+    herrajes:cpHerrajes.map(h=>({...h})),
+    matEsp:cpMatEsp.map(m=>({...m})),
+    transporte:cpTransporte?{...cpTransporte}:null,
+    manoObra
+  };
+  cur.items=[...cur.items,item];
+  resetCarpinteria();
+  render();
+}
+
 function renderEmpaque(){
   const D=DESC.tipo1;
   const items=(cur.items||[]).filter(i=>i.tipo==="empaque");
@@ -1625,6 +1885,38 @@ function calcRefilados(item,d){
 function toMetros(val, unit){ return unit==='m' ? parseFloat(val)||0 : (parseFloat(val)||0)/100; }
 function clearIfZero(el){if(el.value=='0')el.value='';}
 function restoreZero(el,cb){if(el.value===''){el.value='0';}if(cb)cb();}
+function calcCarpinteria(item,d){
+  let total=0;
+  // Tableros: precio por cm2
+  (item.tableros||[]).forEach(function(t){
+    total+=(parseFloat(t.ancho)||0)*(parseFloat(t.alto)||0)*(parseFloat(t.p)||0)*(parseInt(t.cant)||1);
+  });
+  // Listones: precio por ml
+  (item.listones||[]).forEach(function(l){
+    total+=(parseFloat(l.metros)||0)*(parseFloat(l.p)||0)*(parseInt(l.cant)||1);
+  });
+  // Pintura
+  if(item.pintura){
+    total+=(parseFloat(item.pintura.area)||0)*(parseFloat(item.pintura.p)||0)*(parseInt(item.pintura.manos)||1);
+  }
+  // Herrajes
+  (item.herrajes||[]).forEach(function(h){
+    total+=(parseFloat(h.p)||0)*(parseInt(h.cant)||1);
+  });
+  // Materiales especiales
+  (item.matEsp||[]).forEach(function(m){
+    total+=(parseFloat(m.p)||0)*(parseInt(m.cant)||1);
+  });
+  // Transporte
+  if(item.transporte){
+    total+=parseFloat(item.transporte.total)||0;
+  }
+  // Mano de obra
+  const moH=(item.manoObra?(item.manoObra.horas||0):0)+(item.manoObra?(item.manoObra.minutos||0)/60:0);
+  total+=moH*35000;
+  return Math.ceil(total/100)*100;
+}
+
 function calcCintas(item,d){
   return (item.cintas||[]).reduce((s,c)=>s+c.metros*c.base*d,0);
 }
@@ -1642,6 +1934,7 @@ function calcCorteItem(item,d){
     const minutos=(dist/speed)*pasadas/60;
     return Math.ceil((minutos*precioMin)/100)*100;
   }
+  if(item.tipo==="carpinteria") return calcCarpinteria(item,d);
   return 0;
 }
 function calcManoObra(item,d){
@@ -1828,9 +2121,9 @@ function resetLaser(){lCant='1';lRef='';lRefSencillo='0';lMOHoras='0';lMOMinutos
 function renderEditor(){
   const d=DESC[cur.tc]||1;
   const total=(cur.items||[]).reduce((s,i)=>s+calcI(i,d),0);
-  const tabs=['info','vinilo','laser','otros','corte','empaque','resumen'];
-  const tabLabels=['📋 Cliente','🖨️ Vinilos','🖨️ Láser','⋯ Otros','✂️ Corte','📦 Empaque','🧾 Resumen'];
-  const tabIcons=['<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20c0-4 3.6-7 8-7s8 3 8 7\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M11 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2v-7\"/><path d=\"M18 2l4 4-10 10H8v-4L18 2z\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"6 9 6 2 18 2 18 9\"/><path d=\"M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2\"/><rect x=\"6\" y=\"14\" width=\"12\" height=\"8\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"6\" cy=\"12\" r=\"1.5\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.5\" fill=\"currentColor\"/><circle cx=\"18\" cy=\"12\" r=\"1.5\" fill=\"currentColor\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z\"/><polyline points=\"3.27 6.96 12 12.01 20.73 6.96\"/><line x1=\"12\" y1=\"22.08\" x2=\"12\" y2=\"12\"/></svg>','<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2\"/><rect x=\"9\" y=\"3\" width=\"6\" height=\"4\" rx=\"1\"/><path d=\"M9 12h6\"/><path d=\"M9 16h4\"/></svg>'];
+  const tabs=['info','vinilo','laser','otros','corte','empaque','carpinteria','resumen'];
+  const tabLabels=['📋 Cliente','🖨️ Vinilos','🖨️ Láser','⋯ Otros','✂️ Corte','📦 Empaque','🪵 Carpintería','🧾 Resumen'];
+  const tabIcons=['<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>','<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2v-7"/><path d="M18 2l4 4-10 10H8v-4L18 2z"/></svg>','<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2v-7"/><path d="M18 2l4 4-10 10H8v-4L18 2z"/></svg>','<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>','<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>','<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>','<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>','<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>'];
   const tabsHtml=tabs.map((t,i)=>
     `<button onclick="setTab('${t}')" style="
       display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -1838,7 +2131,7 @@ function renderEditor(){
       border-radius:10px;background:${vTab===t?'#F5A80022':'#fff'};
       cursor:pointer;font-family:inherit;transition:all .15s;flex:1;min-width:0;
     ">
-      <span style="display:flex;align-items:center;justify-content:center;width:24px;height:24px">${tabIcons[i]}</span>
+      <span style="display:flex;align-items:center;justify-content:center;width:24px;height:24px">${(tabIcons[i]||"")}</span>
       <span style="font-size:10px;font-weight:${vTab===t?'800':'600'};color:${vTab===t?'#1A1A1A':'#5A5A5A'};text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${tabLabels[i].replace(/^[^\s]+ /,'')}</span>
     </button>`
   ).join('');
@@ -1848,6 +2141,7 @@ function renderEditor(){
   else if(vTab==='laser') content=renderLaser(d);
   else if(vTab==='otros') content=renderOtros(d);
   else if(vTab==='empaque') content=renderEmpaque();
+  else if(vTab==='carpinteria') content=renderCarpinteria(d);
   else if(vTab==='corte') content=renderCorte(d);
   else if(vTab==='resumen') content=renderResumen(d,total);
   return `<div style="max-width:900px;margin:0 auto">
@@ -2038,6 +2332,8 @@ function renderVinilo(d){
   </div>
   ${ivs.length?`<div class="card"><h3>Ítems de vinilos (${ivs.length})</h3>${ivsHtml}</div>`:''}`;
 }
+
+function resetCarpinteria(){cpRef='';cpNombre='';cpTableros=[];cpListones=[];cpPintura=null;cpHerrajes=[];cpMatEsp=[];cpTransporte=null;cpMOHoras='0';cpMOMinutos='0';}
 
 function togDosCaras(id,btn){
   if(dosCarasSet.has(id)){dosCarasSet.delete(id);if(btn)btn.style.background='#E8E8E8';}
