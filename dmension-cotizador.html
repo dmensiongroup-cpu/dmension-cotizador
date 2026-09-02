@@ -806,6 +806,59 @@ function updateEmpaqueMaterial(key, val){
   savePreciosLocal();pushPreciosToGS();
 }
 
+function renderAdminCarpinteria(){
+  const inpStyle='width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;margin-bottom:4px';
+  const lblStyle='font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px;margin-top:12px';
+
+  function carpRow(tipo,m,unit){
+    return '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #F0F0F0">'
+      +'<span style="flex:1;font-size:14px;font-weight:600">'+m.n+'</span>'
+      +'<input type="number" inputmode="decimal" value="'+m.p+'" data-tipo="'+tipo+'" data-id="'+m.id+'" onchange="updateCarpMaterial(this.dataset.tipo,this.dataset.id,parseFloat(this.value)||0)" placeholder="'+unit+'" style="width:130px;'+inpStyle+'">'
+      +'</div>';
+  }
+  const mdfRows=MDF_CALIBRES.map(m=>carpRow('mdf',m,'$/cm²')).join('');
+  const triRows=TRIPLEX_CALIBRES.map(m=>carpRow('triplex',m,'$/cm²')).join('');
+  const finRows=FINGER_CALIBRES.map(m=>carpRow('finger',m,'$/cm²')).join('');
+  const lpRows=LISTONES_PINO.map(m=>carpRow('liston_pino',m,'$/ml')).join('');
+  const lcRows=LISTONES_CHINGALE.map(m=>carpRow('liston_chingale',m,'$/ml')).join('');
+
+  const secStyle='margin-bottom:20px';
+  const secTitle='font-size:13px;font-weight:800;margin:0 0 8px;color:#1A1A1A';
+
+  return '<div class="card">'
+    +'<h3 style="margin:0 0 16px;font-size:16px">Materiales de carpintería</h3>'
+    +'<p style="margin:0 0 16px;font-size:12px;color:#5A5A5A">Precios de venta por cm² para tableros, por metro lineal para listones.</p>'
+    +'<div style="'+secStyle+'"><p style="'+secTitle+'">MDF</p>'+mdfRows+'</div>'
+    +'<div style="'+secStyle+'"><p style="'+secTitle+'">Triplex</p>'+triRows+'</div>'
+    +'<div style="'+secStyle+'"><p style="'+secTitle+'">Finger</p>'+finRows+'</div>'
+    +'<div style="'+secStyle+'"><p style="'+secTitle+'">Listones de pino ($/ml)</p>'+lpRows+'</div>'
+    +'<div style="'+secStyle+'"><p style="'+secTitle+'">Listones de chingalé ($/ml)</p>'+lcRows+'</div>'
+    +'<button onclick="saveCarpinteriaPrecios()" style="width:100%;background:#F5A800;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:8px">💾 Guardar precios</button>'
+    +'</div>';
+}
+
+function updateCarpMaterial(tipo, id, val){
+  if(tipo==='mdf'){const m=MDF_CALIBRES.find(x=>x.id===id);if(m)m.p=val;}
+  if(tipo==='triplex'){const m=TRIPLEX_CALIBRES.find(x=>x.id===id);if(m)m.p=val;}
+  if(tipo==='finger'){const m=FINGER_CALIBRES.find(x=>x.id===id);if(m)m.p=val;}
+  if(tipo==='liston_pino'){const m=LISTONES_PINO.find(x=>x.id===id);if(m)m.p=val;}
+  if(tipo==='liston_chingale'){const m=LISTONES_CHINGALE.find(x=>x.id===id);if(m)m.p=val;}
+}
+
+async function saveCarpinteriaPrecios(){
+  const data={
+    mdf:MDF_CALIBRES.map(m=>({id:m.id,p:m.p})),
+    triplex:TRIPLEX_CALIBRES.map(m=>({id:m.id,p:m.p})),
+    finger:FINGER_CALIBRES.map(m=>({id:m.id,p:m.p})),
+    liston_pino:LISTONES_PINO.map(m=>({id:m.id,p:m.p})),
+    liston_chingale:LISTONES_CHINGALE.map(m=>({id:m.id,p:m.p})),
+  };
+  savePreciosLocal();
+  const r=await gsCall({action:'saveCarpinteriaPrecios',data:data});
+  if(r&&r.ok) alert('✅ Precios de carpintería guardados');
+  else alert('⚠️ Guardado local ok, error en Sheets');
+}
+
 function renderAdminClientes(){
   const rows=clientes.map((c,i)=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #E8E8E8">
@@ -907,6 +960,14 @@ async function syncPreciosFromGS(){
   const r=await gsCall({action:'getPrecios'});
   if(r.procesos||r.materiales||r.papeles||r.acabados){
     const tam=['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'];
+    if(r.carpinteria){
+      const cp=r.carpinteria;
+      if(cp.mdf) cp.mdf.forEach(function(x){const m=MDF_CALIBRES.find(c=>c.id===x.id);if(m)m.p=parseFloat(x.p)||0;});
+      if(cp.triplex) cp.triplex.forEach(function(x){const m=TRIPLEX_CALIBRES.find(c=>c.id===x.id);if(m)m.p=parseFloat(x.p)||0;});
+      if(cp.finger) cp.finger.forEach(function(x){const m=FINGER_CALIBRES.find(c=>c.id===x.id);if(m)m.p=parseFloat(x.p)||0;});
+      if(cp.liston_pino) cp.liston_pino.forEach(function(x){const m=LISTONES_PINO.find(c=>c.id===x.id);if(m)m.p=parseFloat(x.p)||0;});
+      if(cp.liston_chingale) cp.liston_chingale.forEach(function(x){const m=LISTONES_CHINGALE.find(c=>c.id===x.id);if(m)m.p=parseFloat(x.p)||0;});
+    }
     if(r.empaque){
       const cs=CARTONES.find(c=>c.id==='cs');if(cs&&r.empaque.cs)cs.precio=parseFloat(r.empaque.cs)||cs.precio;
       const cb=CARTONES.find(c=>c.id==='cb');if(cb&&r.empaque.cb)cb.precio=parseFloat(r.empaque.cb)||cb.precio;
@@ -1510,7 +1571,6 @@ function renderCarpinteria(d){
   const secTitle='margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#5A5A5A';
 
   return '<div>'
-    +ivsHtml
     +'<div class="card" style="padding:16px">'
     +'<h3 style="margin:0 0 14px;font-size:15px;font-weight:800">Nuevo ítem de carpintería</h3>'
     +'<div class="grid2" style="gap:12px;margin-bottom:14px">'
@@ -1559,7 +1619,9 @@ function renderCarpinteria(d){
     +'<div><label style="'+lblStyle+'">Minutos</label><input type="number" inputmode="decimal" value="'+cpMOMinutos+'" oninput="cpMOMinutos=this.value" onfocus="clearIfZero(this)" onblur="restoreZero(this,null)" placeholder="0" min="0" style="'+inpStyle+'"></div>'
     +'</div></div>'
     +'<button onclick="addCarpinteria()" style="width:100%;background:#F5A800;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">+ Agregar ítem de carpintería</button>'
-    +'</div></div>';
+    +'</div>'
+    +ivsHtml
+    +'</div>';
 }
 
 function addCpPintura(){cpPintura={tipo:'agua',n:'A base de agua',area:0,manos:1,p:0};render();}
@@ -1755,7 +1817,15 @@ async function loadPreciosLocal(){
     const r=await window.storage.get(SK_PRECIOS);
     if(r){
       const data=JSON.parse(r.value);
-      if(data.empaque){
+      if(data.carpinteria){
+      const cp=data.carpinteria;
+      if(cp.mdf) cp.mdf.forEach(function(x){const m=MDF_CALIBRES.find(c=>c.id===x.id);if(m)m.p=x.p;});
+      if(cp.triplex) cp.triplex.forEach(function(x){const m=TRIPLEX_CALIBRES.find(c=>c.id===x.id);if(m)m.p=x.p;});
+      if(cp.finger) cp.finger.forEach(function(x){const m=FINGER_CALIBRES.find(c=>c.id===x.id);if(m)m.p=x.p;});
+      if(cp.liston_pino) cp.liston_pino.forEach(function(x){const m=LISTONES_PINO.find(c=>c.id===x.id);if(m)m.p=x.p;});
+      if(cp.liston_chingale) cp.liston_chingale.forEach(function(x){const m=LISTONES_CHINGALE.find(c=>c.id===x.id);if(m)m.p=x.p;});
+    }
+    if(data.empaque){
       const cs=CARTONES.find(c=>c.id==='cs');if(cs&&data.empaque.cs)cs.precio=data.empaque.cs;
       const cb=CARTONES.find(c=>c.id==='cb');if(cb&&data.empaque.cb)cb.precio=data.empaque.cb;
       if(data.empaque.vp)VINIPEL.precio=data.empaque.vp;
@@ -1774,6 +1844,7 @@ async function savePreciosLocal(){
     const tam=['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'];
     const data={
       empaque:{cs:CARTONES.find(c=>c.id==='cs')?.precio,cb:CARTONES.find(c=>c.id==='cb')?.precio,vp:VINIPEL.precio,tb:TUBO_CARTON.costo},
+      carpinteria:{mdf:MDF_CALIBRES.map(m=>({id:m.id,p:m.p})),triplex:TRIPLEX_CALIBRES.map(m=>({id:m.id,p:m.p})),finger:FINGER_CALIBRES.map(m=>({id:m.id,p:m.p})),liston_pino:LISTONES_PINO.map(m=>({id:m.id,p:m.p})),liston_chingale:LISTONES_CHINGALE.map(m=>({id:m.id,p:m.p}))},
       procesos:PR.map(p=>({id:p.id,cat:p.cat,n:p.n,p:p.p})),
       materiales:MT.map(m=>({id:m.id,c:m.c,n:m.n,p:m.p})),
       papeles:LPAP.flatMap((fam,fi)=>fam.g.map((gr,gi)=>({fi,gi,familia:fam.f,gramaje:gr.gr,...Object.fromEntries(tam.map(t=>[t,gr.p[t]||0]))}))),
@@ -2928,6 +2999,7 @@ function renderAdmin(){
     {id:'papeles',l:'🖨️ Papeles láser'},
     {id:'acabados',l:'✨ Acabados láser'},
     {id:'empaque',l:'📦 Materiales empaque'},
+    {id:'carpinteria',l:'🪵 Materiales carpintería'},
     {id:'clientes',l:'👤 Clientes'},
   ];
   const tabsHtml=tabs.map(t=>`<button class="tab${adminTab===t.id?' active':''}" onclick="adminTab='${t.id}';render()">${t.l}</button>`).join('');
@@ -2938,6 +3010,7 @@ function renderAdmin(){
   if(adminTab==='papeles') content=renderAdminPapeles();
   if(adminTab==='acabados') content=renderAdminAcabados();
   if(adminTab==='empaque') content=renderAdminEmpaque();
+  if(adminTab==='carpinteria') content=renderAdminCarpinteria();
   if(adminTab==='clientes') content=renderAdminClientes();
 
   return `<div style="max-width:860px;margin:0 auto">
