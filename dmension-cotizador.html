@@ -1727,7 +1727,7 @@ function renderCarpinteria(d){
     +'<h3 style="margin:0 0 14px;font-size:15px;font-weight:800">Nuevo ítem de carpintería</h3>'
     +'<div class="grid2" style="gap:12px;margin-bottom:14px">'
     +'<div><label style="'+lblStyle+'">Referencia</label><input id="cp_ref" type="text" value="'+cpRef+'" oninput="cpRef=this.value" placeholder="Ej: Gabinete cocina" style="'+inpStyle+'"></div>'
-    +'<div><label style="'+lblStyle+'">Nombre del producto</label><input type="text" value="'+cpNombre+'" oninput="cpNombre=this.value" placeholder="Descripción del mueble" style="'+inpStyle+'"></div>'
+    +'<div><label style="'+lblStyle+'">Descripción</label><input id="cp_nombre" type="text" value="'+cpNombre+'" oninput="cpNombre=this.value" placeholder="Descripción del ítem" style="'+inpStyle+'"></div>'
     +'</div>'
     // Tableros
     +'<div style="'+secStyle+'">'
@@ -1816,6 +1816,11 @@ function updateCpListon(idx,id,name){
 }
 
 function addCarpinteria(){
+  // Read from DOM in case oninput didn't fire
+  const refEl=document.getElementById('cp_ref');
+  const nomEl=document.getElementById('cp_nombre');
+  if(refEl) cpRef=refEl.value;
+  if(nomEl) cpNombre=nomEl.value;
   if(!cpNombre&&!cpTableros.length&&!cpListones.length){alert('Agrega al menos un nombre o material');return;}
   const moH=(parseFloat(cpMOHoras)||0)+(parseFloat(cpMOMinutos)||0)/60;
   const manoObra=moH>0?{horas:parseFloat(cpMOHoras)||0,minutos:parseFloat(cpMOMinutos)||0,total:moH*35000}:null;
@@ -1835,6 +1840,9 @@ function addCarpinteria(){
   } else {
     cur.items=[...cur.items,item];
   }
+  // Update cots to keep cur in sync
+  cur={...cur,items:[...cur.items]};
+  cots=cots.map(c=>c.id===cur.id?cur:c);
   editandoCarpId=null;
   resetCarpinteria();
   render();
@@ -2978,16 +2986,10 @@ function renderResumen(d,total){
   const icpHtml=icp.map(function(item){
     const val=calcCarpinteria(item,d);
     const isEditing=editandoDesc===item.id;
-    const descAuto=(item.nombre||'Ítem carpintería')
-      +(item.tableros&&item.tableros.length?' + '+item.tableros.map(t=>t.n).join(', '):'')
-      +(item.listones&&item.listones.length?' + Listones':'')
-      +(item.pintura?' + Pintura':'')
-      +(item.herrajes&&item.herrajes.length?' + Herrajes':'')
-      +(item.transporte?' + Transporte':'');
-    const desc=item.descCustom||descAuto;
+    const desc=item.descCustom||(item.nombre||'Ítem carpintería');
     let descHtml='';
     if(isEditing){
-      descHtml='<textarea data-descid="'+item.id+'" style="width:100%;border:1.5px solid #F5A800;border-radius:6px;padding:6px 10px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px">'+desc+'</textarea>'
+      descHtml='<textarea id="descEdit_'+item.id+'" style="width:100%;border:1.5px solid #F5A800;border-radius:6px;padding:6px 10px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px">'+desc+'</textarea>'
         +'<div style="display:flex;gap:6px;margin-top:4px"><button data-did="'+item.id+'" onclick="guardarDesc(this.dataset.did)" style="background:#F5A800;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✓ Guardar</button><button onclick="editandoDesc=null;render()" style="background:#E8E8E8;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit">✕</button></div>';
     } else {
       descHtml='<div style="display:flex;align-items:center;flex:1"><span style="flex:1">'+desc+' <span style="color:#5A5A5A">x'+(item.cant||1)+'</span></span><button data-action="editDesc" data-id="'+item.id+'" style="background:none;border:none;font-size:14px;cursor:pointer;padding:2px 6px">✏️</button></div>';
@@ -3051,6 +3053,7 @@ function renderResumen(d,total){
     +(io.length?'<p style="font-size:12px;font-weight:700;text-transform:uppercase;color:#5A5A5A;margin-bottom:8px;margin-top:8px">Otros productos / servicios</p>'+ioHtml+'<div class="sum-sub">Subtotal: '+fmt(stO)+'</div>':'')
     +((ie.length||iem2.length)?'<p style="font-size:12px;font-weight:700;text-transform:uppercase;color:#5A5A5A;margin-bottom:8px;margin-top:8px">Empaque</p>'+ieHtml+iemHtml+'<div class="sum-sub">Subtotal: '+fmt(stE)+'</div>':'')
     +(ic.length?'<p style="font-size:12px;font-weight:700;text-transform:uppercase;color:#5A5A5A;margin-bottom:8px;margin-top:8px">Corte Láser y CNC</p>'+icHtml+'<div class="sum-sub">Subtotal: '+fmt(stC)+'</div>':'')
+    +(icp.length?'<p style="font-size:12px;font-weight:700;text-transform:uppercase;color:#5A5A5A;margin-bottom:8px;margin-top:8px">Carpintería</p>'+icpHtml+'<div class="sum-sub">Subtotal: '+fmt(stCp)+'</div>':'')
     +'<div class="total-bar"><span>TOTAL</span><span>'+fmt(total)+'</span></div>'
     +'</div>'
     +'<div style="display:flex;gap:12px">'
@@ -3069,9 +3072,9 @@ function genPDF(){
 
   let filas='';
   (cur.items||[]).forEach(function(item,i){
-    const tot=calcI(item,d);
-    const cant=item.cant||1;
-    const unit=Math.round(tot/cant);
+    let tot=calcI(item,d);
+    let cant=item.cant||1;
+    let unit=Math.round(tot/cant);
     let desc='';
     if(item.tipo==='corte'){
       const mins=item.subTipo==='cnc'?calcMinutosCNC(item.distancia,item.speed,item.pasadas):parseFloat(item.minutos)||0;
@@ -3091,6 +3094,11 @@ function genPDF(){
       tot=calcEmpaque(item).total;
       cant=item.cant;
       unit=cant?Math.round(tot/cant):0;
+    }
+    if(item.tipo==='carpinteria'){
+      desc=item.descCustom||(item.nombre||'Ítem carpintería');
+      tot=calcCarpinteria(item,d);
+      cant=1;unit=tot;
     }
     if(item.tipo==='otros'){
       desc=item.descCustom||(item.nombre+(item.dims?' ('+item.dims.ancho+'×'+item.dims.alto+' cm)':''));
