@@ -1770,7 +1770,7 @@ function renderCarpinteria(d){
     +'<div><label style="'+lblStyle+'">Horas</label><input type="number" inputmode="decimal" value="'+cpMOHoras+'" oninput="cpMOHoras=this.value" onfocus="clearIfZero(this)" onblur="restoreZero(this,null)" placeholder="0" min="0" style="'+inpStyle+'"></div>'
     +'<div><label style="'+lblStyle+'">Minutos</label><input type="number" inputmode="decimal" value="'+cpMOMinutos+'" oninput="cpMOMinutos=this.value" onfocus="clearIfZero(this)" onblur="restoreZero(this,null)" placeholder="0" min="0" style="'+inpStyle+'"></div>'
     +'</div></div>'
-    +'<button onclick="addCarpinteria()" style="width:100%;background:#F5A800;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">+ Agregar ítem de carpintería</button>'
+    +(editandoCarpId?'<div style="display:flex;gap:10px"><button onclick="addCarpinteria()" style="flex:1;background:#F5A800;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">✓ Guardar cambios</button><button onclick="editandoCarpId=null;resetCarpinteria();render()" style="background:#E8E8E8;border:none;border-radius:8px;padding:14px;font-size:14px;cursor:pointer;font-family:inherit">✕ Cancelar</button></div>':'<button onclick="addCarpinteria()" style="width:100%;background:#F5A800;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">+ Agregar ítem de carpintería</button>')
     +'</div>'
     +ivsHtml
     +'</div>';
@@ -1820,7 +1820,7 @@ function addCarpinteria(){
   const moH=(parseFloat(cpMOHoras)||0)+(parseFloat(cpMOMinutos)||0)/60;
   const manoObra=moH>0?{horas:parseFloat(cpMOHoras)||0,minutos:parseFloat(cpMOMinutos)||0,total:moH*35000}:null;
   const item={
-    id:uid(),tipo:'carpinteria',
+    id:editandoCarpId||uid(),tipo:'carpinteria',
     ref:cpRef,nombre:cpNombre,
     tableros:cpTableros.map(t=>({...t})),
     listones:cpListones.map(l=>({...l})),
@@ -1830,7 +1830,12 @@ function addCarpinteria(){
     transporte:cpTransporte?{...cpTransporte}:null,
     manoObra
   };
-  cur.items=[...cur.items,item];
+  if(editandoCarpId){
+    cur.items=cur.items.map(i=>i.id===editandoCarpId?item:i);
+  } else {
+    cur.items=[...cur.items,item];
+  }
+  editandoCarpId=null;
   resetCarpinteria();
   render();
 }
@@ -2594,6 +2599,25 @@ function renderVinilo(d){
 }
 
 function resetCarpinteria(){cpRef='';cpNombre='';cpTableros=[];cpListones=[];cpPintura=null;cpHerrajes=[];cpMatEsp=[];cpTransporte=null;cpMOHoras='0';cpMOMinutos='0';}
+let editandoCarpId=null;
+function editCarpinteria(id){
+  const item=cur.items.find(i=>i.id===id);
+  if(!item)return;
+  editandoCarpId=id;
+  cpRef=item.ref||'';
+  cpNombre=item.nombre||'';
+  cpTableros=(item.tableros||[]).map(t=>({...t}));
+  cpListones=(item.listones||[]).map(l=>({...l}));
+  cpPintura=item.pintura?{...item.pintura}:null;
+  cpHerrajes=(item.herrajes||[]).map(h=>({...h}));
+  cpMatEsp=(item.matEsp||[]).map(m=>({...m}));
+  cpTransporte=item.transporte?{...item.transporte}:null;
+  cpMOHoras=item.manoObra?String(item.manoObra.horas||0):'0';
+  cpMOMinutos=item.manoObra?String(item.manoObra.minutos||0):'0';
+  vTab='carpinteria';
+  render();
+  setTimeout(()=>window.scrollTo(0,document.body.scrollHeight),100);
+}
 
 function togDosCaras(id,btn){
   if(dosCarasSet.has(id)){dosCarasSet.delete(id);if(btn)btn.style.background='#E8E8E8';}
