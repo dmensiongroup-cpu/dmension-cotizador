@@ -2170,9 +2170,9 @@ function calcCarpinteria(item,d){
   if(item.transporte){
     total+=parseFloat(item.transporte.total)||0;
   }
-  // Mano de obra
+  // Mano de obra con utilidad según tipo de cliente
   const moH=(item.manoObra?(item.manoObra.horas||0):0)+(item.manoObra?(item.manoObra.minutos||0)/60:0);
-  total+=moH*35000;
+  total+=(moH*35000)*margen;
   return Math.ceil(total/100)*100;
 }
 
