@@ -800,6 +800,17 @@ function renderAdminEmpaque(){
   return `<div class="card"><h3 style="margin:0 0 16px;font-size:16px">Materiales de empaque</h3>${rows}</div>`;
 }
 
+let _carpSynced=false;
+function setAdminTab(t){
+  adminTab=t;
+  if(t==='carpinteria'&&!_carpSynced){
+    _carpSynced=true;
+    syncPreciosFromGS().then(function(){render();});
+  } else {
+    render();
+  }
+}
+
 function updateEmpaqueMaterial(key, val){
   if(key==='cs'){const c=CARTONES.find(c=>c.id==='cs');if(c)c.precio=val;}
   if(key==='cb'){const c=CARTONES.find(c=>c.id==='cb');if(c)c.precio=val;}
@@ -809,8 +820,6 @@ function updateEmpaqueMaterial(key, val){
 }
 
 function renderAdminCarpinteria(){
-  // Sync prices in background and re-render when done
-  syncPreciosFromGS().then(function(){render();});
   const inpStyle='width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none';
   const secStyle='margin-bottom:20px';
   const secTitle='font-size:13px;font-weight:800;margin:0 0 8px;color:#1A1A1A';
@@ -3213,7 +3222,7 @@ function renderAdmin(){
     {id:'carpinteria',l:'🪵 Materiales carpintería'},
     {id:'clientes',l:'👤 Clientes'},
   ];
-  const tabsHtml=tabs.map(t=>`<button class="tab${adminTab===t.id?' active':''}" onclick="adminTab='${t.id}';render()">${t.l}</button>`).join('');
+  const tabsHtml=tabs.map(t=>`<button class="tab${adminTab===t.id?' active':''}" onclick="setAdminTab('${t.id}')">${t.l}</button>`).join('');
   
   let content='';
   if(adminTab==='procesos') content=renderAdminList(PR,'procesos','cat');
