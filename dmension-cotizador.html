@@ -781,7 +781,7 @@ function resetDesc(itemId){
 
 // ── CLIENTES ─────────────────────────────────────────────────────
 function renderAdminEmpaque(){
-  const inpStyle='width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;margin-bottom:4px';
+  const inpStyle='width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box';
   const lblStyle='font-size:11px;font-weight:700;color:#5A5A5A;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px;margin-top:12px';
   const materiales=[
     {key:'cs',n:'Cartón corrugado sencillo',desc:'Lámina 194×180 cm',costo:CARTONES.find(c=>c.id==='cs').precio},
@@ -809,18 +809,19 @@ function updateEmpaqueMaterial(key, val){
 }
 
 function renderAdminCarpinteria(){
+  // Sync prices in background and re-render when done
+  syncPreciosFromGS().then(function(){render();});
   const inpStyle='width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none';
   const secStyle='margin-bottom:20px';
   const secTitle='font-size:13px;font-weight:800;margin:0 0 8px;color:#1A1A1A';
 
   function carpRow(tipo,m,unit,canDel){
-    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #F0F0F0">'
-      +'<span style="flex:1;font-size:14px;font-weight:600">'+m.n+'</span>'
-      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">'
-      +'<span style="font-size:10px;color:#5A5A5A;font-weight:600">COSTO ('+unit+')</span>'
-      +'<input type="number" inputmode="decimal" value="'+m.p+'" data-tipo="'+tipo+'" data-id="'+m.id+'" onchange="updateCarpMaterial(this.dataset.tipo,this.dataset.id,parseFloat(this.value)||0)" style="width:120px;'+inpStyle+'">'
-      +'</div>'
-      +(canDel?'<button data-tipo="'+tipo+'" data-id="'+m.id+'" onclick="delCarpItem(this.dataset.tipo,this.dataset.id)" class="del" style="flex-shrink:0">×</button>':'');
+    return '<div style="display:block;padding:12px 0;border-bottom:1px solid #F0F0F0">'
+      +'<p style="font-size:14px;font-weight:600;margin:0 0 6px">'+m.n
+      +(canDel?' <button data-tipo="'+tipo+'" data-id="'+m.id+'" onclick="delCarpItem(this.dataset.tipo,this.dataset.id)" class="del" style="float:right">×</button>':'')
+      +'</p>'
+      +'<label style="font-size:10px;color:#5A5A5A;font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase">Costo ('+unit+')</label>'
+      +'<input type="number" inputmode="decimal" value="'+m.p+'" data-tipo="'+tipo+'" data-id="'+m.id+'" onchange="updateCarpMaterial(this.dataset.tipo,this.dataset.id,parseFloat(this.value)||0)" onfocus="this.select()" style="display:block;width:100%;border:1.5px solid #E8E8E8;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none">'
       +'</div>';
   }
 
@@ -829,9 +830,11 @@ function renderAdminCarpinteria(){
     const rows=arr.map(m=>carpRow(tipo,m,unit,true)).join('');
     return '<div style="'+secStyle+'">'
       +'<p style="'+secTitle+'">'+titulo+'</p>'
+      +'<div style="display:block;width:100%">'
       +rows
-      +'<div style="display:flex;gap:8px;margin-top:8px">'
-      +'<input id="new_'+tipo+'_n" type="text" placeholder="Nombre (ej: MDF 22mm)" style="flex:1;'+inpStyle+'">'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
+      +'<input id="new_'+tipo+'_n" type="text" placeholder="Nombre (ej: MDF 22mm)" style="flex:2;min-width:160px;'+inpStyle+'">'
       +'<input id="new_'+tipo+'_p" type="number" inputmode="decimal" placeholder="Costo" style="width:110px;'+inpStyle+'">'
       +'<button data-tipo="'+tipo+'" onclick="addCarpItem(this.dataset.tipo)" style="background:#F5A800;border:none;border-radius:6px;padding:9px 14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ Agregar</button>'
       +'</div>'
@@ -846,7 +849,7 @@ function renderAdminCarpinteria(){
         +'<span style="flex:1;font-size:14px;font-weight:600">'+m.n+'</span>'
         +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">'
         +'<span style="font-size:10px;color:#5A5A5A;font-weight:600">COSTO ('+unit+')</span>'
-        +'<input type="number" inputmode="decimal" value="'+m.p+'" data-ci="'+ci+'" data-id="'+m.id+'" onchange="updateCarpCatItem(parseInt(this.dataset.ci),this.dataset.id,parseFloat(this.value)||0)" style="width:120px;'+inpStyle+'">'
+        +'<input type="number" inputmode="decimal" value="'+m.p+'" data-ci="'+ci+'" data-id="'+m.id+'" onchange="updateCarpCatItem(parseInt(this.dataset.ci),this.dataset.id,parseFloat(this.value)||0)" onfocus="this.select()" style="width:120px;'+inpStyle+'">'
         +'</div>'
         +'<button data-ci="'+ci+'" data-id="'+m.id+'" onclick="delCarpCatItem(parseInt(this.dataset.ci),this.dataset.id)" class="del" style="flex-shrink:0">×</button>'
         +'</div>';
@@ -857,8 +860,8 @@ function renderAdminCarpinteria(){
       +'<button onclick="delCarpCat('+ci+')" class="del">× Eliminar categoría</button>'
       +'</div>'
       +itemRows
-      +'<div style="display:flex;gap:8px;margin-top:8px">'
-      +'<input id="new_cat'+ci+'_n" type="text" placeholder="Nombre ítem" style="flex:1;'+inpStyle+'">'
+      +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
+      +'<input id="new_cat'+ci+'_n" type="text" placeholder="Nombre ítem" style="flex:2;min-width:160px;'+inpStyle+'">'
       +'<input id="new_cat'+ci+'_p" type="number" inputmode="decimal" placeholder="Costo" style="width:110px;'+inpStyle+'">'
       +'<button onclick="addCarpCatItem('+ci+')" style="background:#F5A800;border:none;border-radius:6px;padding:9px 14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ Agregar</button>'
       +'</div>'
@@ -1079,22 +1082,23 @@ async function syncPreciosFromGS(){
     const tam=['carta','oficio','extraoficio','tabloide','extratabloide','supertabloide'];
     if(r.carpinteria){
       const cp=r.carpinteria;
-      function syncArr(src,dest){
-        if(!src) return;
+      function syncArr(src,dest,origIds){
+        if(!src||src.length===0) return;
         src.forEach(function(x){
           const m=dest.find(c=>c.id===x.id);
-          if(m){m.p=parseFloat(x.p)||0;if(x.n)m.n=x.n;}
+          if(m){m.p=parseFloat(x.p)||0;}
           else dest.push({id:x.id,n:x.n||x.id,p:parseFloat(x.p)||0});
         });
         for(let i=dest.length-1;i>=0;i--){
-          if(!src.find(x=>x.id===dest[i].id)) dest.splice(i,1);
+          const isOrig=origIds&&origIds.includes(dest[i].id);
+          if(!isOrig&&!src.find(x=>x.id===dest[i].id)) dest.splice(i,1);
         }
       }
-      syncArr(cp.mdf,MDF_CALIBRES);
-      syncArr(cp.triplex,TRIPLEX_CALIBRES);
-      syncArr(cp.finger,FINGER_CALIBRES);
-      syncArr(cp.liston_pino,LISTONES_PINO);
-      syncArr(cp.liston_chingale,LISTONES_CHINGALE);
+      syncArr(cp.mdf,MDF_CALIBRES,['mdf_2_5','mdf_3','mdf_4','mdf_5_5','mdf_9','mdf_12','mdf_15','mdf_18']);
+      syncArr(cp.triplex,TRIPLEX_CALIBRES,['tri_6_5','tri_9','tri_12','tri_15','tri_18']);
+      syncArr(cp.finger,FINGER_CALIBRES,['fp_15','fp_18','fr_15','fr_18']);
+      syncArr(cp.liston_pino,LISTONES_PINO,['lp1','lp2','lp3','lp4','lp5','lp6','lp7','lp8','lp9']);
+      syncArr(cp.liston_chingale,LISTONES_CHINGALE,['lc1','lc2']);
       if(cp.cats) CARP_CATS=cp.cats;
     }
     if(r.empaque){
@@ -1621,12 +1625,16 @@ function renderCarpinteria(d){
     cm2Cats.forEach(function(cat){
       opts+='<optgroup label="'+cat.nombre+'">'+cat.items.map(it=>'<option value="cat_'+cat.id+'_'+it.id+'"'+(t.id==='cat_'+cat.id+'_'+it.id?' selected':'')+'>'+it.n+'</option>').join('')+'</optgroup>';
     });
-    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">'
-      +'<select onchange="cpTableros['+i+'].id=this.value;cpTableros['+i+'].n=this.options[this.selectedIndex].text;updateCpMaterial('+i+')" style="flex:2;min-width:160px;'+inpStyle+'">'+opts+'</select>'
-      +'<input type="number" inputmode="decimal" value="'+t.ancho+'" oninput="cpTableros['+i+'].ancho=parseFloat(this.value)||0" placeholder="Ancho cm" style="width:90px;'+inpStyle+'">'
-      +'<input type="number" inputmode="decimal" value="'+t.alto+'" oninput="cpTableros['+i+'].alto=parseFloat(this.value)||0" placeholder="Alto cm" style="width:90px;'+inpStyle+'">'
-      +'<input type="number" inputmode="decimal" value="'+t.cant+'" oninput="cpTableros['+i+'].cant=parseInt(this.value)||1" placeholder="Cant" style="width:70px;'+inpStyle+'">'
-      +'<button onclick="cpTableros.splice('+i+',1);render()" class="del">×</button>'
+    return '<div style="background:#fff;border:1.5px solid #E8E8E8;border-radius:8px;padding:10px;margin-bottom:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      +'<select onchange="cpTableros['+i+'].id=this.value;cpTableros['+i+'].n=this.options[this.selectedIndex].text;updateCpMaterial('+i+')" style="flex:1;'+inpStyle+'">'+opts+'</select>'
+      +'<button onclick="cpTableros.splice('+i+',1);render()" class="del" style="flex-shrink:0">×</button>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<div style="flex:1;min-width:70px"><label style="font-size:10px;font-weight:700;color:#5A5A5A;display:block;margin-bottom:3px">ANCHO (cm)</label><input type="number" inputmode="decimal" value="'+t.ancho+'" oninput="cpTableros['+i+'].ancho=parseFloat(this.value)||0" onfocus="this.select()" placeholder="0" style="width:100%;'+inpStyle+'"></div>'
+      +'<div style="flex:1;min-width:70px"><label style="font-size:10px;font-weight:700;color:#5A5A5A;display:block;margin-bottom:3px">ALTO (cm)</label><input type="number" inputmode="decimal" value="'+t.alto+'" oninput="cpTableros['+i+'].alto=parseFloat(this.value)||0" onfocus="this.select()" placeholder="0" style="width:100%;'+inpStyle+'"></div>'
+      +'<div style="width:70px"><label style="font-size:10px;font-weight:700;color:#5A5A5A;display:block;margin-bottom:3px">CANT</label><input type="number" inputmode="decimal" value="'+t.cant+'" oninput="cpTableros['+i+'].cant=parseInt(this.value)||1" onfocus="this.select()" placeholder="1" style="width:100%;'+inpStyle+'"></div>'
+      +'</div>'
       +'</div>';
   }).join('');
 
@@ -1972,24 +1980,24 @@ async function loadPreciosLocal(){
       const data=JSON.parse(r.value);
       if(data.carpinteria){
       const cp=data.carpinteria;
-      function restoreArr(src,dest){
-        if(!src) return;
-        // Update existing, add new
+      function restoreArr(src,dest,origIds){
+        if(!src||src.length===0) return;
         src.forEach(function(x){
           const m=dest.find(c=>c.id===x.id);
-          if(m){m.p=x.p;if(x.n)m.n=x.n;}
+          if(m){m.p=x.p;}
           else dest.push({id:x.id,n:x.n||x.id,p:x.p||0});
         });
-        // Remove deleted (keep if not in src and is original)
+        // Only remove non-original items not in src
         for(let i=dest.length-1;i>=0;i--){
-          if(!src.find(x=>x.id===dest[i].id)) dest.splice(i,1);
+          const isOrig=origIds&&origIds.includes(dest[i].id);
+          if(!isOrig&&!src.find(x=>x.id===dest[i].id)) dest.splice(i,1);
         }
       }
-      restoreArr(cp.mdf,MDF_CALIBRES);
-      restoreArr(cp.triplex,TRIPLEX_CALIBRES);
-      restoreArr(cp.finger,FINGER_CALIBRES);
-      restoreArr(cp.liston_pino,LISTONES_PINO);
-      restoreArr(cp.liston_chingale,LISTONES_CHINGALE);
+      restoreArr(cp.mdf,MDF_CALIBRES,['mdf_2_5','mdf_3','mdf_4','mdf_5_5','mdf_9','mdf_12','mdf_15','mdf_18']);
+      restoreArr(cp.triplex,TRIPLEX_CALIBRES,['tri_6_5','tri_9','tri_12','tri_15','tri_18']);
+      restoreArr(cp.finger,FINGER_CALIBRES,['fp_15','fp_18','fr_15','fr_18']);
+      restoreArr(cp.liston_pino,LISTONES_PINO,['lp1','lp2','lp3','lp4','lp5','lp6','lp7','lp8','lp9']);
+      restoreArr(cp.liston_chingale,LISTONES_CHINGALE,['lc1','lc2']);
       if(cp.cats) CARP_CATS=cp.cats;
     }
     if(data.empaque){
@@ -2124,16 +2132,18 @@ function toMetros(val, unit){ return unit==='m' ? parseFloat(val)||0 : (parseFlo
 function clearIfZero(el){if(el.value=='0')el.value='';}
 function restoreZero(el,cb){if(el.value===''){el.value='0';}if(cb)cb();}
 function calcCarpinteria(item,d){
+  // Utilidad sobre precio de venta según tipo de cliente
+  const margen=d>=1?(1/0.555):d>=0.925?(1/0.60):d>=0.854?(1/0.65):(1/0.70);
   let total=0;
-  // Tableros y cats cm2: costo por cm2 / descuento cliente
+  // Tableros: costo × margen
   (item.tableros||[]).forEach(function(t){
     const base=(parseFloat(t.ancho)||0)*(parseFloat(t.alto)||0)*(parseFloat(t.p)||0)*(parseInt(t.cant)||1);
-    total+=base/d;
+    total+=base*margen;
   });
-  // Listones: costo por ml / descuento cliente
+  // Listones: costo × margen
   (item.listones||[]).forEach(function(l){
     const base=(parseFloat(l.metros)||0)*(parseFloat(l.p)||0)*(parseInt(l.cant)||1);
-    total+=base/d;
+    total+=base*margen;
   });
   // Pintura: precio libre (ya es precio de venta)
   if(item.pintura){
@@ -2220,6 +2230,7 @@ function calcI(item,d){
     const grafadoCost=item.grafado?(item.grafado.pasadas*item.grafado.base*d):0;
     return Math.ceil(((base+acabadosTotal)*(item.cant||1)*d+calcRefilados(item,d)+grafadoCost+calcCintas(item,d)+calcManoObra(item,d)+calcCorteItem(item,d))/100)*100;
   }
+  if(item.tipo==="carpinteria") return calcCarpinteria(item,d);
   return 0;
 }
 function calcT(c){const d=DESC[c.tc]||1;return(c.items||[]).reduce((s,i)=>s+calcI(i,d),0);}
@@ -2856,8 +2867,10 @@ function renderResumen(d,total){
   const ie=(cur.items||[]).filter(i=>i.tipo==="empaque");
   const ic=(cur.items||[]).filter(i=>i.tipo==="corte");
   const il=(cur.items||[]).filter(i=>i.tipo==="laser");
+  const icp=(cur.items||[]).filter(i=>i.tipo==="carpinteria");
   const stV=iv.reduce((s,i)=>s+calcI(i,d),0);
   const stL=il.reduce((s,i)=>s+calcI(i,d),0);
+  const stCp=icp.reduce((s,i)=>s+calcI(i,d),0);
   const ivHtml=iv.map(item=>{
     const refHtml=item.ref?'<p style="margin:0 0 2px;font-size:12px;font-weight:800;color:#D4900A">'+item.ref+'</p>':'';
     const descAuto=item.subs.map(function(s){return s.n+(s.dosCaras?' (×2)':'');}).join(' + ');
@@ -2929,6 +2942,35 @@ function renderResumen(d,total){
   }).join('');
   const stE=ie.reduce((s,i)=>s+calcEmpaque(i).total,0)+iem2.reduce((s,i)=>s+(parseFloat(i.precioUnit)||0)*(parseInt(i.cant)||1)*DESC.tipo1,0);
   const stC=ic.reduce((s,i)=>s+calcCorte(i,d),0);
+  const icpHtml=icp.map(function(item){
+    const val=calcCarpinteria(item,d);
+    const isEditing=editandoDesc===item.id;
+    const descAuto=(item.nombre||'Ítem carpintería')
+      +(item.tableros&&item.tableros.length?' + '+item.tableros.map(t=>t.n).join(', '):'')
+      +(item.listones&&item.listones.length?' + Listones':'')
+      +(item.pintura?' + Pintura':'')
+      +(item.herrajes&&item.herrajes.length?' + Herrajes':'')
+      +(item.transporte?' + Transporte':'');
+    const desc=item.descCustom||descAuto;
+    let descHtml='';
+    if(isEditing){
+      descHtml='<textarea data-descid="'+item.id+'" style="width:100%;border:1.5px solid #F5A800;border-radius:6px;padding:6px 10px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px">'+desc+'</textarea>'
+        +'<div style="display:flex;gap:6px;margin-top:4px"><button data-did="'+item.id+'" onclick="guardarDesc(this.dataset.did)" style="background:#F5A800;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✓ Guardar</button><button onclick="editandoDesc=null;render()" style="background:#E8E8E8;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit">✕</button></div>';
+    } else {
+      descHtml='<div style="display:flex;align-items:center;flex:1"><span style="flex:1">'+desc+' <span style="color:#5A5A5A">x'+(item.cant||1)+'</span></span><button data-action="editDesc" data-id="'+item.id+'" style="background:none;border:none;font-size:14px;cursor:pointer;padding:2px 6px">✏️</button></div>';
+    }
+    return '<div class="sum-row" style="display:flex;justify-content:space-between;width:100%;align-items:flex-start">'
+      +'<div style="flex:1">'
+      +(item.ref?'<p style="margin:0 0 2px;font-size:12px;font-weight:800;color:#D4900A">'+item.ref+'</p>':'')
+      +'<div style="display:flex;align-items:center;flex:1">'+descHtml+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-left:12px">'
+      +'<span style="font-weight:700;font-size:15px;white-space:nowrap">'+fmt(val)+'</span>'
+      +'<button data-action="moveUp" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer">↑</button>'
+      +'<button data-action="moveDown" data-id="'+item.id+'" style="background:none;border:1px solid #E8E8E8;border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer">↓</button>'
+      +'<button data-action="delItem" data-id="'+item.id+'" class="del">×</button>'
+      +'</div></div>';
+  }).join('');
 
   const icHtml=ic.map(function(item){
     const tot=calcCorte(item,d);
